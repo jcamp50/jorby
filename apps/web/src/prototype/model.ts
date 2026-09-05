@@ -7,6 +7,7 @@ export type Member = {
   displayName: string
   initials: string
   profileLabel: string
+  avatarUrl?: string | null
 }
 
 export type ListRecord = {

@@ -1,9 +1,22 @@
+import { ChevronRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { MemberMark } from '@/components/jorby/member-mark'
+import { BackLink, EmptyState, ScreenHeader, SectionHeading } from '@/components/jorby/screen'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { MemberMark, ScreenHeader, Surface } from '@/components/ui/chrome'
+import { Card } from '@/components/ui/card'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { householdPath, thingDetailPath } from '@/lib/routes'
 import { thingLens, type ThingLens } from '@/lib/thing-lifecycle'
-import { thingDetailPath } from '@/lib/routes'
 import { usePrototype } from '@/prototype/PrototypeProvider'
 
 const lenses: ThingLens[] = ['Wish', 'Home', 'History']
@@ -12,7 +25,9 @@ export function ThingsIndexPage() {
   const { householdId = '' } = useParams()
   const [params, setParams] = useSearchParams()
   const { things } = usePrototype()
-  const lens = (lenses.includes(params.get('lens') as ThingLens) ? params.get('lens') : 'Wish') as ThingLens
+  const lens = (
+    lenses.includes(params.get('lens') as ThingLens) ? params.get('lens') : 'Wish'
+  ) as ThingLens
   const visible = useMemo(
     () => things.filter((thing) => thingLens(thing.lifecycleState) === lens),
     [lens, things],
@@ -21,35 +36,45 @@ export function ThingsIndexPage() {
   return (
     <div>
       <ScreenHeader title="Things" description="One object type. The tab is just a lens." />
-      <div className="mb-4 flex gap-2" role="tablist" aria-label="Thing lens">
-        {lenses.map((item) => (
-          <button
-            key={item}
-            type="button"
-            role="tab"
-            aria-selected={lens === item}
-            className={`min-h-11 flex-1 rounded-md border text-sm ${lens === item ? 'border-foreground bg-muted' : 'border-border'}`}
-            onClick={() => setParams({ lens: item })}
-          >
-            {item}
-          </button>
-        ))}
-      </div>
+      <Tabs value={lens} onValueChange={(value) => setParams({ lens: value })} className="mb-4">
+        {/* The default list is h-9; override at the same group-variant specificity so each
+            trigger clears a 44px touch target. */}
+        <TabsList className="w-full group-data-[orientation=horizontal]/tabs:h-13">
+          {lenses.map((item) => (
+            <TabsTrigger key={item} value={item} className="flex-1">
+              {item}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
       {visible.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nothing in {lens} yet.</p>
+        <EmptyState>Nothing in {lens} yet.</EmptyState>
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid gap-3 sm:grid-cols-2">
           {visible.map((thing) => (
             <li key={thing.id}>
-              <Link to={thingDetailPath(householdId, thing.id)}>
-                <Surface>
-                  <p className="font-medium">{thing.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {thing.lifecycleState.replaceAll('_', ' ').toLowerCase()}
-                    {thing.reservedByMembershipId ? ' · Reserved' : ''}
-                  </p>
-                </Surface>
-              </Link>
+              <Card className="gap-0 py-0 transition-colors hover:bg-accent/40">
+                <Link
+                  to={thingDetailPath(householdId, thing.id)}
+                  className="flex min-h-16 items-center gap-3 px-4 py-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-pretty">{thing.name}</p>
+                    {thing.priceLabel ? (
+                      <p className="text-sm text-muted-foreground">{thing.priceLabel}</p>
+                    ) : null}
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <Badge variant="secondary" className="capitalize">
+                        {thing.lifecycleState.replaceAll('_', ' ').toLowerCase()}
+                      </Badge>
+                      {thing.reservedByMembershipId ? (
+                        <Badge variant="outline">Reserved</Badge>
+                      ) : null}
+                    </div>
+                  </div>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </Link>
+              </Card>
             </li>
           ))}
         </ul>
@@ -60,7 +85,8 @@ export function ThingsIndexPage() {
 
 export function ThingDetailPage() {
   const { thingId = '', householdId = '' } = useParams()
-  const { things, members, currentMembershipId, reserveThing, releaseThing, purchaseThing } = usePrototype()
+  const { things, members, currentMembershipId, reserveThing, releaseThing, purchaseThing } =
+    usePrototype()
   const thing = things.find((item) => item.id === thingId)
   const [purchaseOpen, setPurchaseOpen] = useState(false)
 
@@ -70,63 +96,118 @@ export function ThingDetailPage() {
 
   const reserver = members.find((member) => member.id === thing.reservedByMembershipId)
   const canReserve =
-    (thing.lifecycleState === 'IDEA' || thing.lifecycleState === 'BUYING') && !thing.reservedByMembershipId
+    (thing.lifecycleState === 'IDEA' || thing.lifecycleState === 'BUYING') &&
+    !thing.reservedByMembershipId
   const canRelease = thing.reservedByMembershipId === currentMembershipId
 
+  const facts = [
+    thing.priceLabel ? { label: 'Price', value: thing.priceLabel } : null,
+    thing.recipientLabel ? { label: 'For', value: thing.recipientLabel } : null,
+    thing.storageLocation ? { label: 'Lives in', value: thing.storageLocation } : null,
+  ].filter((fact) => fact !== null)
+
+  function decide(state: 'OWNED' | 'GIFTED' | 'BOUGHT') {
+    purchaseThing(thingId, state)
+    setPurchaseOpen(false)
+  }
+
   return (
-    <div className="space-y-6">
-      <p className="text-sm">
-        <Link className="underline" to={`/${householdId}/things`}>
-          Things
-        </Link>
-      </p>
-      <ScreenHeader
-        title={thing.name}
-        description={`${thingLens(thing.lifecycleState)} · ${thing.lifecycleState.replaceAll('_', ' ').toLowerCase()}`}
-      />
-      {thing.priceLabel ? <p className="text-sm">{thing.priceLabel}</p> : null}
-      {thing.recipientLabel ? <p className="text-sm text-muted-foreground">For {thing.recipientLabel}</p> : null}
-      {thing.storageLocation ? <p className="text-sm text-muted-foreground">Lives in {thing.storageLocation}</p> : null}
-      {thing.notes ? <p className="text-sm">{thing.notes}</p> : null}
-      {reserver ? (
-        <p className="flex items-center gap-2 text-sm">
-          <MemberMark member={reserver} />
-          Reserved by {reserver.displayName} (visible to the household)
-        </p>
+    <div>
+      <BackLink to={householdPath(householdId, 'things')} label="Things" />
+      <ScreenHeader title={thing.name} description={thing.notes} />
+
+      <div className="mb-6 flex flex-wrap gap-2">
+        <Badge variant="secondary">{thingLens(thing.lifecycleState)}</Badge>
+        <Badge variant="outline" className="capitalize">
+          {thing.lifecycleState.replaceAll('_', ' ').toLowerCase()}
+        </Badge>
+      </div>
+
+      {facts.length > 0 ? (
+        <dl className="mb-6 grid gap-2">
+          {facts.map((fact) => (
+            <div key={fact.label} className="flex gap-2 text-sm">
+              <dt className="w-24 shrink-0 text-muted-foreground">{fact.label}</dt>
+              <dd className="text-pretty">{fact.value}</dd>
+            </div>
+          ))}
+        </dl>
       ) : null}
-      <div className="flex flex-wrap gap-2">
+
+      {reserver ? (
+        <section className="mb-6">
+          <SectionHeading>Reservation</SectionHeading>
+          <p className="flex min-h-12 items-center gap-2 rounded-lg border px-4 text-sm">
+            <MemberMark member={reserver} />
+            Reserved by {reserver.displayName}
+            <span className="ml-auto text-muted-foreground">visible to us both</span>
+          </p>
+        </section>
+      ) : null}
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         {canReserve ? (
-          <Button type="button" onClick={() => reserveThing(thing.id)}>
+          <Button type="button" size="lg" className="h-12" onClick={() => reserveThing(thing.id)}>
             Reserve
           </Button>
         ) : null}
         {canRelease ? (
-          <Button type="button" variant="outline" onClick={() => releaseThing(thing.id)}>
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            className="h-12"
+            onClick={() => releaseThing(thing.id)}
+          >
             Release reservation
           </Button>
         ) : null}
         {thingLens(thing.lifecycleState) === 'Wish' ? (
-          <Button type="button" variant="outline" onClick={() => setPurchaseOpen(true)}>
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            className="h-12"
+            onClick={() => setPurchaseOpen(true)}
+          >
             Mark purchased
           </Button>
         ) : null}
       </div>
-      {purchaseOpen ? (
-        <div className="space-y-3 rounded-lg border border-border bg-card p-4" role="group" aria-label="Purchase outcome">
-          <p className="text-sm font-medium">What happened?</p>
-          <div className="flex flex-col gap-2">
-            <Button type="button" onClick={() => { purchaseThing(thing.id, 'OWNED'); setPurchaseOpen(false) }}>
+
+      <Sheet open={purchaseOpen} onOpenChange={setPurchaseOpen}>
+        <SheetContent side="bottom" className="rounded-t-xl">
+          <SheetHeader>
+            <SheetTitle>What happened?</SheetTitle>
+            <SheetDescription>
+              Purchasing clears the reservation. Pick where {thing.name} goes next.
+            </SheetDescription>
+          </SheetHeader>
+          <SheetFooter>
+            <Button type="button" size="lg" className="h-12" onClick={() => decide('OWNED')}>
               Move to Home
             </Button>
-            <Button type="button" variant="outline" onClick={() => { purchaseThing(thing.id, 'GIFTED'); setPurchaseOpen(false) }}>
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              className="h-12"
+              onClick={() => decide('GIFTED')}
+            >
               Mark gifted
             </Button>
-            <Button type="button" variant="outline" onClick={() => { purchaseThing(thing.id, 'BOUGHT'); setPurchaseOpen(false) }}>
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              className="h-12"
+              onClick={() => decide('BOUGHT')}
+            >
               Leave as bought
             </Button>
-          </div>
-        </div>
-      ) : null}
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

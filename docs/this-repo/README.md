@@ -21,3 +21,4 @@ Those three documents describe Foundry-backed production. Implementation in this
 ## Docs in this folder
 
 - [UI prototype](./ui-prototype.md) — current clickable mock, local-only state, and what is intentionally fake
+- [Design system and mobile rules](./design-system.md) — how shadcn is installed, and the mobile constraints every screen must meet

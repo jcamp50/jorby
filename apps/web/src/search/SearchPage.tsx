@@ -1,6 +1,10 @@
+import { ChevronRight, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ScreenHeader, Surface } from '@/components/ui/chrome'
+import { EmptyState, ScreenHeader } from '@/components/jorby/screen'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { usePrototype } from '@/prototype/PrototypeProvider'
 
 export function SearchPage() {
@@ -11,29 +15,48 @@ export function SearchPage() {
 
   return (
     <div>
-      <ScreenHeader title="Search" description="Household catalog only. Provider catalogs stay in the Add flow later." />
-      <label className="mb-4 block text-sm">
-        <span className="sr-only">Search Jorby</span>
-        <input
-          className="min-h-11 w-full rounded-md border border-input bg-background px-3"
+      <ScreenHeader
+        title="Search"
+        description="Household catalog only. Provider catalogs stay in the Add flow later."
+      />
+      <div className="relative mb-4">
+        <Search
+          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden
+        />
+        <Input
+          className="h-12 pl-9"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Lists, notes, places, watch, things"
+          aria-label="Search Jorby"
           type="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
         />
-      </label>
+      </div>
       {query && results.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No matches in this household.</p>
+        <EmptyState>No matches in this household.</EmptyState>
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid gap-3 sm:grid-cols-2">
           {results.map((hit) => (
             <li key={`${hit.kind}-${hit.id}`}>
-              <Link to={`/${householdId}/${hit.hrefSuffix}`}>
-                <Surface>
-                  <p className="text-xs text-muted-foreground">{hit.kind}</p>
-                  <p className="font-medium">{hit.title}</p>
-                </Surface>
-              </Link>
+              <Card className="gap-0 py-0 transition-colors hover:bg-accent/40">
+                <Link
+                  to={`/${householdId}/${hit.hrefSuffix}`}
+                  className="flex min-h-16 items-center gap-3 px-4 py-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <Badge variant="secondary" className="mb-1.5">
+                      {hit.kind}
+                    </Badge>
+                    <p className="font-medium text-pretty">{hit.title}</p>
+                  </div>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </Link>
+              </Card>
             </li>
           ))}
         </ul>

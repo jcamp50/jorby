@@ -1,8 +1,20 @@
+import { Check, ChevronRight, Minus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { MemberMark } from '@/components/jorby/member-mark'
+import { Rating } from '@/components/jorby/rating'
+import {
+  BackLink,
+  EmptyState,
+  FilterChip,
+  FilterRow,
+  ScreenHeader,
+  SectionHeading,
+} from '@/components/jorby/screen'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { MemberMark, RatingText, ScreenHeader, Surface } from '@/components/ui/chrome'
-import { watchDetailPath } from '@/lib/routes'
+import { Card } from '@/components/ui/card'
+import { householdPath, watchDetailPath } from '@/lib/routes'
 import { everyoneWants } from '@/prototype/model'
 import { usePrototype } from '@/prototype/PrototypeProvider'
 
@@ -19,34 +31,47 @@ export function WatchIndexPage() {
 
   return (
     <div>
-      <ScreenHeader title="Watch" description="Shared progress on shows. A missing want is not a yes." />
-      <div className="mb-4 flex flex-wrap gap-2">
+      <ScreenHeader
+        title="Watch"
+        description="Shared progress on shows. A missing want is not a yes."
+      />
+      <FilterRow label="Filter by status">
         {(['ALL', ...statuses] as const).map((item) => (
-          <button
-            key={item}
-            type="button"
-            className={`min-h-11 rounded-full border px-3 text-sm ${status === item ? 'border-foreground bg-muted' : 'border-border'}`}
-            onClick={() => setStatus(item)}
-          >
-            {item === 'ALL' ? 'All' : item.replaceAll('_', ' ').toLowerCase()}
-          </button>
+          <FilterChip key={item} active={status === item} onClick={() => setStatus(item)}>
+            <span className="capitalize">{item === 'ALL' ? 'All' : item.toLowerCase()}</span>
+          </FilterChip>
         ))}
-      </div>
-      <ul className="space-y-3">
-        {visible.map((entry) => (
-          <li key={entry.id}>
-            <Link to={watchDetailPath(householdId, entry.id)}>
-              <Surface>
-                <p className="font-medium">{entry.title}</p>
-                <p className="text-sm text-muted-foreground">
-                  {entry.year} · {entry.mediaType === 'SHOW' ? 'Show' : 'Movie'} · {entry.status.toLowerCase()}
-                  {everyoneWants(entry, members.length) ? ' · Everyone wants' : ''}
-                </p>
-              </Surface>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      </FilterRow>
+      {visible.length === 0 ? (
+        <EmptyState>Nothing matches this filter.</EmptyState>
+      ) : (
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {visible.map((entry) => (
+            <li key={entry.id}>
+              <Card className="gap-0 py-0 transition-colors hover:bg-accent/40">
+                <Link
+                  to={watchDetailPath(householdId, entry.id)}
+                  className="flex min-h-16 items-center gap-3 px-4 py-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-pretty">{entry.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {entry.year} · {entry.mediaType === 'SHOW' ? 'Show' : 'Movie'}
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <Badge variant="secondary" className="capitalize">
+                        {entry.status.toLowerCase()}
+                      </Badge>
+                      {everyoneWants(entry, members.length) ? <Badge>Everyone wants</Badge> : null}
+                    </div>
+                  </div>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </Link>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
@@ -63,51 +88,83 @@ export function WatchDetailPage() {
   const wants = entry.wantsMembershipIds.includes(currentMembershipId)
 
   return (
-    <div className="space-y-6">
-      <p className="text-sm">
-        <Link className="underline" to={`/${householdId}/watch`}>
-          Watch
-        </Link>
-      </p>
-      <ScreenHeader title={entry.title} description={`${entry.year} · ${entry.mediaType === 'SHOW' ? 'Show' : 'Movie'}`} />
-      <p className="text-sm capitalize">{entry.status.toLowerCase()}</p>
-      {entry.mediaType === 'SHOW' && entry.lastWatchedSeasonNumber ? (
-        <p className="text-sm text-muted-foreground">
-          Shared progress: last finished S{entry.lastWatchedSeasonNumber} E{entry.lastWatchedEpisodeNumber}
-        </p>
-      ) : null}
-      <Button type="button" variant={wants ? 'default' : 'outline'} onClick={() => toggleWantToWatch(entry.id)}>
+    <div>
+      <BackLink to={householdPath(householdId, 'watch')} label="Watch" />
+      <ScreenHeader
+        title={entry.title}
+        description={`${entry.year} · ${entry.mediaType === 'SHOW' ? 'Show' : 'Movie'}`}
+      />
+
+      <div className="mb-6 flex flex-wrap gap-2">
+        <Badge variant="secondary" className="capitalize">
+          {entry.status.toLowerCase()}
+        </Badge>
+        {entry.mediaType === 'SHOW' && entry.lastWatchedSeasonNumber ? (
+          <Badge variant="outline">
+            Up to S{entry.lastWatchedSeasonNumber} E{entry.lastWatchedEpisodeNumber}
+          </Badge>
+        ) : null}
+      </div>
+
+      <Button
+        type="button"
+        size="lg"
+        variant={wants ? 'default' : 'outline'}
+        aria-pressed={wants}
+        className="h-12 w-full sm:w-auto"
+        onClick={() => toggleWantToWatch(entry.id)}
+      >
         {wants ? 'You want to watch this' : 'I want to watch this'}
       </Button>
-      <p className="text-sm text-muted-foreground">
-        {everyoneWants(entry, members.length)
-          ? 'Everyone currently wants this.'
-          : `${entry.wantsMembershipIds.length} of ${members.length} members want this.`}
-      </p>
-      <ul className="flex gap-2">
-        {members.map((member) => (
-          <li key={member.id} className="flex items-center gap-2 text-sm">
-            <MemberMark member={member} />
-            {entry.wantsMembershipIds.includes(member.id) ? `${member.displayName} wants it` : `${member.displayName} has not said yes`}
-          </li>
-        ))}
-      </ul>
-      {entry.reviews.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-medium">Reviews</h2>
-          {entry.reviews.map((review) => {
-            const member = members.find((item) => item.id === review.membershipId)
+
+      <section className="mt-6">
+        <SectionHeading>
+          {everyoneWants(entry, members.length)
+            ? 'Everyone wants this'
+            : `${entry.wantsMembershipIds.length} of ${members.length} want this`}
+        </SectionHeading>
+        <ul className="space-y-2">
+          {members.map((member) => {
+            const memberWants = entry.wantsMembershipIds.includes(member.id)
             return (
-              <Surface key={review.membershipId}>
-                <div className="flex items-center gap-2 text-sm">
-                  {member ? <MemberMark member={member} /> : null}
-                  <span>{member?.displayName}</span>
-                  <RatingText halfStars={review.ratingHalfStars} />
-                </div>
-                <p className="mt-1 text-sm">{review.reviewText}</p>
-              </Surface>
+              <li
+                key={member.id}
+                className="flex min-h-12 items-center gap-2 rounded-lg border px-4 text-sm"
+              >
+                <MemberMark member={member} />
+                <span className="font-medium">{member.displayName}</span>
+                <span className="ml-auto flex items-center gap-1.5 text-muted-foreground">
+                  {memberWants ? (
+                    <Check className="size-4" aria-hidden />
+                  ) : (
+                    <Minus className="size-4" aria-hidden />
+                  )}
+                  {memberWants ? 'Wants it' : 'Has not said yes'}
+                </span>
+              </li>
             )
           })}
+        </ul>
+      </section>
+
+      {entry.reviews.length > 0 ? (
+        <section className="mt-6">
+          <SectionHeading>Reviews</SectionHeading>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {entry.reviews.map((review) => {
+              const member = members.find((item) => item.id === review.membershipId)
+              return (
+                <Card key={review.membershipId} className="gap-2 py-4">
+                  <div className="flex items-center gap-2 px-4 text-sm">
+                    {member ? <MemberMark member={member} /> : null}
+                    <span className="font-medium">{member?.displayName}</span>
+                    <Rating halfStars={review.ratingHalfStars} className="ml-auto" />
+                  </div>
+                  <p className="px-4 text-sm text-pretty">{review.reviewText}</p>
+                </Card>
+              )
+            })}
+          </div>
         </section>
       ) : null}
     </div>

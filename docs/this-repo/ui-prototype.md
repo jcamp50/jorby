@@ -8,10 +8,13 @@
 
 Give a clickable, mobile-first walkthrough of Home, Lists, Notes, Places, Watch, Things, Search, and Household settings **without** Foundry, OSDK, or the membership service.
 
+See [design-system.md](./design-system.md) for how shadcn is installed and the mobile rules each screen must satisfy.
+
 ## What is real
 
 - Routes from the agent handoff
 - Six-section navigation
+- shadcn `new-york` components on Radix primitives
 - Dual-member ratings and reviews as UI
 - Thing Wish / Home / History lenses
 - List completion as a desired on/off state
