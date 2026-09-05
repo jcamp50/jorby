@@ -3,6 +3,8 @@ import { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { MemberMark } from '@/components/jorby/member-mark'
 import { BackLink, EmptyState, ScreenHeader, SectionHeading } from '@/components/jorby/screen'
+import { NotFoundState } from '@/components/jorby/states'
+import { toastResult } from '@/lib/action-toast'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -91,7 +93,7 @@ export function ThingDetailPage() {
   const [purchaseOpen, setPurchaseOpen] = useState(false)
 
   if (!thing) {
-    return <p className="text-sm text-muted-foreground">This thing isn’t available.</p>
+    return <NotFoundState backTo={householdPath(householdId, 'things')} backLabel="Things" />
   }
 
   const reserver = members.find((member) => member.id === thing.reservedByMembershipId)
@@ -106,8 +108,15 @@ export function ThingDetailPage() {
     thing.storageLocation ? { label: 'Lives in', value: thing.storageLocation } : null,
   ].filter((fact) => fact !== null)
 
+  const outcomeMessages = {
+    OWNED: 'Moved to Home.',
+    GIFTED: 'Marked as gifted.',
+    BOUGHT: 'Left as bought.',
+  }
+
   function decide(state: 'OWNED' | 'GIFTED' | 'BOUGHT') {
-    purchaseThing(thingId, state)
+    // The item leaves the current lens, so the outcome needs stating explicitly.
+    toastResult(purchaseThing(thingId, state), outcomeMessages[state])
     setPurchaseOpen(false)
   }
 
@@ -147,7 +156,12 @@ export function ThingDetailPage() {
 
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         {canReserve ? (
-          <Button type="button" size="lg" className="h-12" onClick={() => reserveThing(thing.id)}>
+          <Button
+            type="button"
+            size="lg"
+            className="h-12"
+            onClick={() => toastResult(reserveThing(thing.id), 'Reserved. The other of us can see this.')}
+          >
             Reserve
           </Button>
         ) : null}
@@ -157,7 +171,7 @@ export function ThingDetailPage() {
             size="lg"
             variant="outline"
             className="h-12"
-            onClick={() => releaseThing(thing.id)}
+            onClick={() => toastResult(releaseThing(thing.id), 'Reservation released.')}
           >
             Release reservation
           </Button>

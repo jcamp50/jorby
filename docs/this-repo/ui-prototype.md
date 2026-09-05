@@ -28,6 +28,7 @@ See [design-system.md](./design-system.md) for how shadcn is installed and the m
 - A “View as” control in Household settings switches which mock member you are
 - Provider search (Places / Watch) is not connected; entries are seeded
 - Reloading the page resets mock data
+- Load latency and failures are simulated with `?simulate=slow|error|empty`
 - Invite copy is a placeholder string, not a membership-service token
 
 ## Out of scope for this prototype

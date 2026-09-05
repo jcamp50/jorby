@@ -2,6 +2,8 @@ import { ChevronRight } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useBlocker, useParams } from 'react-router-dom'
 import { BackLink, EmptyState, ScreenHeader } from '@/components/jorby/screen'
+import { NotFoundState } from '@/components/jorby/states'
+import { toastResult } from '@/lib/action-toast'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -75,7 +77,7 @@ export function NoteDetailPage() {
   const blocker = useBlocker(dirty)
 
   if (!note) {
-    return <p className="text-sm text-muted-foreground">This note isn’t available.</p>
+    return <NotFoundState backTo={householdPath(householdId, 'notes')} backLabel="Notes" />
   }
 
   return (
@@ -134,7 +136,9 @@ export function NoteDetailPage() {
           size="lg"
           className="h-11 w-full sm:w-auto"
           disabled={!dirty}
-          onClick={() => saveNote({ id: note.id, title, markdownBody: body })}
+          onClick={() =>
+            toastResult(saveNote({ id: note.id, title, markdownBody: body }), 'Note saved')
+          }
         >
           {dirty ? 'Save changes' : 'Saved'}
         </Button>

@@ -11,6 +11,7 @@ import {
   ScreenHeader,
   SectionHeading,
 } from '@/components/jorby/screen'
+import { NotFoundState } from '@/components/jorby/states'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { householdPath, placeDetailPath } from '@/lib/routes'
@@ -111,7 +112,7 @@ export function PlaceDetailPage() {
   const reviews = place ? (placeReviews[place.id] ?? []) : []
 
   if (!place) {
-    return <p className="text-sm text-muted-foreground">This place isn’t available.</p>
+    return <NotFoundState backTo={householdPath(householdId, 'places')} backLabel="Places" />
   }
 
   return (

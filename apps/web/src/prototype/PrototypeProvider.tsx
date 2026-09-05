@@ -1,4 +1,5 @@
-import { createContext, useContext, useMemo, useReducer, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
+import { actionFailed, actionOk, AppErrorCode, type ActionResult } from '@/lib/errors'
 import { thingLens } from '@/lib/thing-lifecycle'
 import {
   createSeedState,
@@ -9,7 +10,24 @@ import {
   type PrototypeState,
 } from '@/prototype/model'
 
+export type LoadStatus = 'loading' | 'ready' | 'error'
+
+/**
+ * Production loads through OSDK, which has real latency and real failures. The
+ * prototype fakes both so loading and error states are reachable and testable.
+ * Drive it with `?simulate=slow`, `?simulate=error`, or `?simulate=empty`.
+ */
+export type SimulationMode = 'none' | 'slow' | 'error' | 'empty'
+
+function readSimulation(): SimulationMode {
+  const value = new URLSearchParams(window.location.search).get('simulate')
+  return value === 'slow' || value === 'error' || value === 'empty' ? value : 'none'
+}
+
 type Action =
+  | { type: 'loaded' }
+  | { type: 'loadFailed' }
+  | { type: 'retry' }
   | { type: 'setCurrentMember'; membershipId: string }
   | { type: 'setItemComplete'; itemId: string; isComplete: boolean }
   | { type: 'addListItem'; listId: string; text: string }
@@ -19,8 +37,35 @@ type Action =
   | { type: 'releaseThing'; thingId: string }
   | { type: 'purchaseThing'; thingId: string; outcome: 'OWNED' | 'GIFTED' | 'BOUGHT' }
 
-function reducer(state: PrototypeState, action: Action): PrototypeState {
+type State = PrototypeState & { status: LoadStatus; loadAttempt: number }
+
+function init(): State {
+  const seed = createSeedState()
+  if (readSimulation() === 'empty') {
+    return {
+      ...seed,
+      lists: [],
+      items: [],
+      notes: [],
+      places: [],
+      placeReviews: {},
+      watch: [],
+      things: [],
+      status: 'loading',
+      loadAttempt: 0,
+    }
+  }
+  return { ...seed, status: 'loading', loadAttempt: 0 }
+}
+
+function reducer(state: State, action: Action): State {
   switch (action.type) {
+    case 'loaded':
+      return { ...state, status: 'ready' }
+    case 'loadFailed':
+      return { ...state, status: 'error' }
+    case 'retry':
+      return { ...state, status: 'loading', loadAttempt: state.loadAttempt + 1 }
     case 'setCurrentMember':
       return { ...state, currentMembershipId: action.membershipId }
     case 'setItemComplete':
@@ -37,9 +82,6 @@ function reducer(state: PrototypeState, action: Action): PrototypeState {
         text: action.text.trim(),
         isComplete: false,
         assigneeMembershipId: null,
-      }
-      if (!item.text) {
-        return state
       }
       return { ...state, items: [...state.items, item] }
     }
@@ -77,7 +119,7 @@ function reducer(state: PrototypeState, action: Action): PrototypeState {
       return {
         ...state,
         things: state.things.map((thing) =>
-          thing.id === action.thingId && (thing.lifecycleState === 'IDEA' || thing.lifecycleState === 'BUYING')
+          thing.id === action.thingId
             ? { ...thing, reservedByMembershipId: state.currentMembershipId }
             : thing,
         ),
@@ -86,9 +128,7 @@ function reducer(state: PrototypeState, action: Action): PrototypeState {
       return {
         ...state,
         things: state.things.map((thing) =>
-          thing.id === action.thingId && thing.reservedByMembershipId === state.currentMembershipId
-            ? { ...thing, reservedByMembershipId: null }
-            : thing,
+          thing.id === action.thingId ? { ...thing, reservedByMembershipId: null } : thing,
         ),
       }
     case 'purchaseThing':
@@ -106,15 +146,17 @@ function reducer(state: PrototypeState, action: Action): PrototypeState {
 }
 
 type PrototypeContextValue = PrototypeState & {
+  status: LoadStatus
+  retry: () => void
   currentMember: PrototypeState['members'][number]
   setCurrentMember: (membershipId: string) => void
   setItemComplete: (itemId: string, isComplete: boolean) => void
-  addListItem: (listId: string, text: string) => void
-  saveNote: (note: Pick<NoteRecord, 'id' | 'title' | 'markdownBody'>) => void
+  addListItem: (listId: string, text: string) => ActionResult
+  saveNote: (note: Pick<NoteRecord, 'id' | 'title' | 'markdownBody'>) => ActionResult
   toggleWantToWatch: (watchId: string) => void
-  reserveThing: (thingId: string) => void
-  releaseThing: (thingId: string) => void
-  purchaseThing: (thingId: string, outcome: 'OWNED' | 'GIFTED' | 'BOUGHT') => void
+  reserveThing: (thingId: string) => ActionResult
+  releaseThing: (thingId: string) => ActionResult
+  purchaseThing: (thingId: string, outcome: 'OWNED' | 'GIFTED' | 'BOUGHT') => ActionResult
   unfinishedLists: { list: PrototypeState['lists'][number]; remaining: number }[]
   weShouldPlaces: PrototypeState['places']
   watchTonight: PrototypeState['watch']
@@ -125,7 +167,17 @@ type PrototypeContextValue = PrototypeState & {
 const PrototypeContext = createContext<PrototypeContextValue | null>(null)
 
 export function PrototypeProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, createSeedState)
+  const [state, dispatch] = useReducer(reducer, undefined, init)
+  const simulation = readSimulation()
+
+  // Mock latency only. Production reads come from @osdk/react, not an effect.
+  useEffect(() => {
+    const delay = simulation === 'slow' ? 2000 : 300
+    const timer = setTimeout(() => {
+      dispatch({ type: simulation === 'error' ? 'loadFailed' : 'loaded' })
+    }, delay)
+    return () => clearTimeout(timer)
+  }, [simulation, state.loadAttempt])
 
   const value = useMemo<PrototypeContextValue>(() => {
     const currentMember =
@@ -145,15 +197,74 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
     return {
       ...state,
       currentMember,
+      retry: () => dispatch({ type: 'retry' }),
       setCurrentMember: (membershipId) => dispatch({ type: 'setCurrentMember', membershipId }),
-      setItemComplete: (itemId, isComplete) => dispatch({ type: 'setItemComplete', itemId, isComplete }),
-      addListItem: (listId, text) => dispatch({ type: 'addListItem', listId, text }),
-      saveNote: (note) =>
-        dispatch({ type: 'saveNote', noteId: note.id, title: note.title, markdownBody: note.markdownBody }),
+      setItemComplete: (itemId, isComplete) =>
+        dispatch({ type: 'setItemComplete', itemId, isComplete }),
+
+      addListItem: (listId, text) => {
+        if (text.trim() === '') {
+          return actionFailed(AppErrorCode.VALIDATION_FAILED)
+        }
+        dispatch({ type: 'addListItem', listId, text })
+        return actionOk
+      },
+
+      saveNote: (note) => {
+        if (note.title.trim() === '') {
+          return actionFailed(AppErrorCode.VALIDATION_FAILED)
+        }
+        dispatch({
+          type: 'saveNote',
+          noteId: note.id,
+          title: note.title,
+          markdownBody: note.markdownBody,
+        })
+        return actionOk
+      },
+
       toggleWantToWatch: (watchId) => dispatch({ type: 'toggleWantToWatch', watchId }),
-      reserveThing: (thingId) => dispatch({ type: 'reserveThing', thingId }),
-      releaseThing: (thingId) => dispatch({ type: 'releaseThing', thingId }),
-      purchaseThing: (thingId, outcome) => dispatch({ type: 'purchaseThing', thingId, outcome }),
+
+      reserveThing: (thingId) => {
+        const thing = state.things.find((item) => item.id === thingId)
+        if (!thing) {
+          return actionFailed(AppErrorCode.NOT_FOUND_OR_HIDDEN)
+        }
+        if (thing.lifecycleState !== 'IDEA' && thing.lifecycleState !== 'BUYING') {
+          return actionFailed(AppErrorCode.VALIDATION_FAILED)
+        }
+        if (thing.reservedByMembershipId) {
+          return actionFailed(AppErrorCode.DUPLICATE)
+        }
+        dispatch({ type: 'reserveThing', thingId })
+        return actionOk
+      },
+
+      releaseThing: (thingId) => {
+        const thing = state.things.find((item) => item.id === thingId)
+        if (!thing) {
+          return actionFailed(AppErrorCode.NOT_FOUND_OR_HIDDEN)
+        }
+        // Only the reserver releases, so neither of us can quietly undo the other.
+        if (thing.reservedByMembershipId !== state.currentMembershipId) {
+          return actionFailed(AppErrorCode.ACCESS_DENIED)
+        }
+        dispatch({ type: 'releaseThing', thingId })
+        return actionOk
+      },
+
+      purchaseThing: (thingId, outcome) => {
+        const thing = state.things.find((item) => item.id === thingId)
+        if (!thing) {
+          return actionFailed(AppErrorCode.NOT_FOUND_OR_HIDDEN)
+        }
+        if (thingLens(thing.lifecycleState) !== 'Wish') {
+          return actionFailed(AppErrorCode.VALIDATION_FAILED)
+        }
+        dispatch({ type: 'purchaseThing', thingId, outcome })
+        return actionOk
+      },
+
       unfinishedLists,
       weShouldPlaces,
       watchTonight,
@@ -170,12 +281,22 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
             .map((item) => item.text)
             .join(' ')
           if (`${list.name} ${list.description ?? ''} ${itemText}`.toLowerCase().includes(q)) {
-            hits.push({ kind: 'List', id: list.id, title: list.name, hrefSuffix: `lists/${list.id}` })
+            hits.push({
+              kind: 'List',
+              id: list.id,
+              title: list.name,
+              hrefSuffix: `lists/${list.id}`,
+            })
           }
         }
         for (const note of state.notes) {
           if (`${note.title} ${note.markdownBody} ${note.tags.join(' ')}`.toLowerCase().includes(q)) {
-            hits.push({ kind: 'Note', id: note.id, title: note.title, hrefSuffix: `notes/${note.id}` })
+            hits.push({
+              kind: 'Note',
+              id: note.id,
+              title: note.title,
+              hrefSuffix: `notes/${note.id}`,
+            })
           }
         }
         for (const place of state.places) {
@@ -186,18 +307,37 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
               .toLowerCase()
               .includes(q)
           ) {
-            hits.push({ kind: 'Place', id: place.id, title: place.name, hrefSuffix: `places/${place.id}` })
+            hits.push({
+              kind: 'Place',
+              id: place.id,
+              title: place.name,
+              hrefSuffix: `places/${place.id}`,
+            })
           }
         }
         for (const entry of state.watch) {
           const reviewText = entry.reviews.map((review) => review.reviewText).join(' ')
           if (`${entry.title} ${reviewText}`.toLowerCase().includes(q)) {
-            hits.push({ kind: 'Watch', id: entry.id, title: entry.title, hrefSuffix: `watch/${entry.id}` })
+            hits.push({
+              kind: 'Watch',
+              id: entry.id,
+              title: entry.title,
+              hrefSuffix: `watch/${entry.id}`,
+            })
           }
         }
         for (const thing of state.things) {
-          if (`${thing.name} ${thing.notes ?? ''} ${thing.recipientLabel ?? ''}`.toLowerCase().includes(q)) {
-            hits.push({ kind: 'Thing', id: thing.id, title: thing.name, hrefSuffix: `things/${thing.id}` })
+          if (
+            `${thing.name} ${thing.notes ?? ''} ${thing.recipientLabel ?? ''}`
+              .toLowerCase()
+              .includes(q)
+          ) {
+            hits.push({
+              kind: 'Thing',
+              id: thing.id,
+              title: thing.name,
+              hrefSuffix: `things/${thing.id}`,
+            })
           }
         }
         return hits

@@ -3,6 +3,8 @@ import { type FormEvent, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { MemberMark } from '@/components/jorby/member-mark'
 import { EmptyState, BackLink, ScreenHeader } from '@/components/jorby/screen'
+import { NotFoundState } from '@/components/jorby/states'
+import { toastResult } from '@/lib/action-toast'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -62,15 +64,17 @@ export function ListDetailPage() {
   const [draft, setDraft] = useState('')
 
   if (!list) {
-    return <p className="text-sm text-muted-foreground">This list isn’t available.</p>
+    return <NotFoundState backTo={householdPath(householdId, 'lists')} backLabel="Lists" />
   }
 
   const listItems = items.filter((item) => item.listId === list.id)
 
   function onAdd(event: FormEvent) {
     event.preventDefault()
-    addListItem(listId, draft)
-    setDraft('')
+    // The new item appears immediately, so only failure needs announcing.
+    if (toastResult(addListItem(listId, draft))) {
+      setDraft('')
+    }
   }
 
   return (

@@ -9,7 +9,9 @@ import {
 } from 'lucide-react'
 import { NavLink, Outlet, useParams } from 'react-router-dom'
 import { MemberMark } from '@/components/jorby/member-mark'
+import { ErrorState, ScreenSkeleton } from '@/components/jorby/states'
 import { Button } from '@/components/ui/button'
+import { AppErrorCode } from '@/lib/errors'
 import { householdPath } from '@/lib/routes'
 import { usePrototype } from '@/prototype/PrototypeProvider'
 
@@ -27,7 +29,7 @@ const TAB_BAR_SPACE = 'calc(3.5rem + env(safe-area-inset-bottom))'
 
 export function AppShell() {
   const { householdId } = useParams()
-  const { currentMember } = usePrototype()
+  const { currentMember, status, retry } = usePrototype()
 
   if (!householdId) {
     return <Outlet />
@@ -88,7 +90,11 @@ export function AppShell() {
           className="min-w-0 flex-1 px-4 py-5 sm:py-6 md:pb-6"
           style={{ paddingBottom: `calc(${TAB_BAR_SPACE} + 1.5rem)` }}
         >
-          <Outlet />
+          {status === 'loading' ? <ScreenSkeleton /> : null}
+          {status === 'error' ? (
+            <ErrorState code={AppErrorCode.NETWORK_UNAVAILABLE} onRetry={retry} />
+          ) : null}
+          {status === 'ready' ? <Outlet /> : null}
         </main>
       </div>
 

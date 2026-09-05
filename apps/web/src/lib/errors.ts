@@ -24,3 +24,44 @@ export function normalizeUnknownError(error: unknown): AppErrorCode {
   }
   return AppErrorCode.UNKNOWN
 }
+
+/**
+ * User-facing copy for each error code. Deliberately vague about whether an
+ * inaccessible record exists, so the UI cannot leak another household's data.
+ */
+const messages: Record<AppErrorCode, string> = {
+  AUTH_REQUIRED: 'Sign in again to keep going.',
+  ACCESS_DENIED: 'You can’t do that.',
+  NOT_FOUND_OR_HIDDEN: 'This isn’t available.',
+  VALIDATION_FAILED: 'That didn’t look right. Check it and try again.',
+  STALE_REVISION: 'Someone else changed this first. Reload to see their version.',
+  LOCKED_BY_OTHER_MEMBER: 'Someone else is editing this right now.',
+  LOCK_EXPIRED: 'Your editing lock expired. Reload before saving.',
+  DUPLICATE: 'That already exists.',
+  PROVIDER_UNAVAILABLE: 'Search is unavailable right now.',
+  RATE_LIMITED: 'Too many tries. Wait a moment.',
+  NETWORK_UNAVAILABLE: 'You appear to be offline.',
+  UNKNOWN: 'Something went wrong.',
+}
+
+export function errorMessage(code: AppErrorCode): string {
+  return messages[code]
+}
+
+/** Whether retrying the same request could plausibly succeed. */
+export function isRetryable(code: AppErrorCode): boolean {
+  return (
+    code === AppErrorCode.NETWORK_UNAVAILABLE ||
+    code === AppErrorCode.PROVIDER_UNAVAILABLE ||
+    code === AppErrorCode.RATE_LIMITED ||
+    code === AppErrorCode.UNKNOWN
+  )
+}
+
+export type ActionResult = { ok: true } | { ok: false; code: AppErrorCode }
+
+export const actionOk: ActionResult = { ok: true }
+
+export function actionFailed(code: AppErrorCode): ActionResult {
+  return { ok: false, code }
+}

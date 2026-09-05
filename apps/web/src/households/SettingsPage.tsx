@@ -1,9 +1,11 @@
 import { Copy } from 'lucide-react'
+import { toast } from 'sonner'
 import { MemberMark } from '@/components/jorby/member-mark'
 import { ScreenHeader, SectionHeading } from '@/components/jorby/screen'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { AppErrorCode, errorMessage } from '@/lib/errors'
 import { usePrototype } from '@/prototype/PrototypeProvider'
 
 export function SettingsPage() {
@@ -59,9 +61,12 @@ export function SettingsPage() {
               type="button"
               variant="outline"
               className="h-11 w-full sm:w-auto"
-              onClick={() =>
-                void navigator.clipboard.writeText('https://jorby.local/invite/prototype-token')
-              }
+              onClick={() => {
+                navigator.clipboard
+                  .writeText('https://jorby.local/invite/prototype-token')
+                  .then(() => toast.success('Invite link copied.'))
+                  .catch(() => toast.error(errorMessage(AppErrorCode.UNKNOWN)))
+              }}
             >
               <Copy aria-hidden />
               Copy invite link

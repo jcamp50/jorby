@@ -11,6 +11,7 @@ import {
   ScreenHeader,
   SectionHeading,
 } from '@/components/jorby/screen'
+import { NotFoundState } from '@/components/jorby/states'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -82,7 +83,7 @@ export function WatchDetailPage() {
   const entry = watch.find((item) => item.id === watchEntryId)
 
   if (!entry) {
-    return <p className="text-sm text-muted-foreground">This title isn’t available.</p>
+    return <NotFoundState backTo={householdPath(householdId, 'watch')} backLabel="Watch" />
   }
 
   const wants = entry.wantsMembershipIds.includes(currentMembershipId)

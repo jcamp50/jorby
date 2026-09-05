@@ -11,6 +11,7 @@ import { NoteDetailPage, NotesIndexPage } from '@/notes/NotesPages'
 import { PlaceDetailPage, PlacesIndexPage } from '@/places/PlacesPages'
 import { PrototypeProvider } from '@/prototype/PrototypeProvider'
 import { SearchPage } from '@/search/SearchPage'
+import { Toaster } from '@/components/ui/sonner'
 import { ThingDetailPage, ThingsIndexPage } from '@/things/ThingsPages'
 import { WatchDetailPage, WatchIndexPage } from '@/watch/WatchPages'
 
@@ -45,6 +46,11 @@ export function AppRouter() {
   return (
     <PrototypeProvider>
       <RouterProvider router={router} />
+      {/* Sonner applies mobileOffset below 600px; lift it clear of the fixed tab bar. */}
+      <Toaster
+        position="bottom-center"
+        mobileOffset={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom) + 1rem)' }}
+      />
     </PrototypeProvider>
   )
 }
