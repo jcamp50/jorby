@@ -6,11 +6,23 @@
 
 This directory is the product and technical source of truth for Jorby. Update these documents in the same pull request as any implementation change that alters behavior, schema, security, or scope.
 
+## What this GitHub repo is
+
+**Frontend + membership service only.** Ontology object types, Actions, Functions, and object security are specified here so the UI stays aligned, but they are implemented in Foundry, not in this git repository.
+
+| Track | Where | Implemented in this repo? |
+| --- | --- | --- |
+| Product decisions | [product-decisions.md](./product-decisions.md) | No (decisions only) |
+| Ontology | [ontology-spec.md](./ontology-spec.md) | No |
+| Production build contract | [frontend-and-membership-agent-handoff.md](./frontend-and-membership-agent-handoff.md) | Partially (UI now, OSDK later) |
+| This repo (web, membership, local UI) | [this-repo/README.md](./this-repo/README.md) | Yes |
+
 ## Read in this order
 
 1. [Product decisions](./product-decisions.md) — confirmed scope, behavior, and unresolved platform checks.
-2. [Ontology specification](./ontology-spec.md) — object types, properties, keys, links, interfaces, and invariants.
-3. [Frontend and membership-service agent handoff](./frontend-and-membership-agent-handoff.md) — build instructions for the React OSDK frontend and trusted user/membership service.
+2. [Ontology specification](./ontology-spec.md) — object types, properties, keys, links, interfaces, and invariants (Foundry).
+3. [Frontend and membership-service agent handoff](./frontend-and-membership-agent-handoff.md) — production build contract for this repo.
+4. [This repository](./this-repo/README.md) — GitHub-only notes, including the [UI prototype](./this-repo/ui-prototype.md).
 
 ## Document precedence
 
@@ -18,7 +30,7 @@ When documents disagree, use this precedence:
 
 1. A newer explicitly approved decision recorded in `product-decisions.md`.
 2. Security and tenancy invariants in `ontology-spec.md`.
-3. Implementation guidance in the agent handoff.
+3. Implementation guidance in the agent handoff, then `docs/this-repo/`.
 4. Existing application code.
 
 Do not silently resolve a contradiction in code. Record the decision, update the affected documents, and then implement it.
@@ -28,14 +40,10 @@ Do not silently resolve a contradiction in code. Record the decision, update the
 For every material change:
 
 1. Add or amend a decision in `product-decisions.md`.
-2. Update affected ontology properties, links, actions, and invariants.
-3. Update the screen/query or service contract in the agent handoff.
+2. If Ontology behavior changes, update `ontology-spec.md` (even though Ontology is not coded here).
+3. If this repo’s UI, hosting, or membership service changes, update `docs/this-repo/` and the agent handoff as needed.
 4. Add or update tests that prove the decision.
 5. Call out migrations and compatibility concerns in the pull request.
-
-## Current repository state
-
-As of 2026-09-05 this GitHub monorepo is the source of truth for specifications and the React web scaffold in `apps/web`. Generated Foundry OSDK packages, `@osdk/react` wiring, Foundry hosting config, and the membership service implementation are not in this tree yet. Do not guess Ontology API names; wait for the generated SDK.
 
 ## Scope boundary
 

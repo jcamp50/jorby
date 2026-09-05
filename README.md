@@ -1,21 +1,24 @@
 # Jorby
 
-Private shared-household catalog. Foundry Ontology is the application backend; this repository is the GitHub source of truth for the React frontend, membership service, and living specifications.
+Private shared-household catalog.
+
+**This GitHub repository is the frontend and membership service only.** Foundry Ontology is the application backend and lives in a separate project. Product and Ontology specs are copied here so the UI stays aligned.
 
 ## Living specifications
 
-Read [docs/README.md](./docs/README.md) first. Those documents override assumptions in code when they disagree.
+Start at [docs/README.md](./docs/README.md).
+
+- Product and Ontology (Foundry, not coded here): `docs/product-decisions.md`, `docs/ontology-spec.md`
+- This repo: [docs/this-repo/README.md](./docs/this-repo/README.md)
 
 ## Repository layout
 
 ```text
 jorby/
-├── apps/
-│   └── web/                 # React PWA (Vite, TypeScript, Tailwind, shadcn)
-├── services/
-│   └── membership/          # Trusted invite/membership service (not started)
-├── packages/                # Shared packages (reserved)
-├── docs/                    # Product, ontology, and agent handoff
+├── apps/web/                 # React PWA
+├── services/membership/      # Trusted invite/membership service
+├── packages/                 # Shared packages (reserved)
+├── docs/                     # Product + Ontology specs, plus docs/this-repo/
 └── .github/workflows/
 ```
 

@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { AppShell } from '@/app/shell/AppShell'
 import { CallbackPage } from '@/auth/CallbackPage'
 import { WelcomePage } from '@/auth/WelcomePage'
@@ -9,35 +9,42 @@ import { SettingsPage } from '@/households/SettingsPage'
 import { ListDetailPage, ListsIndexPage } from '@/lists/ListsPages'
 import { NoteDetailPage, NotesIndexPage } from '@/notes/NotesPages'
 import { PlaceDetailPage, PlacesIndexPage } from '@/places/PlacesPages'
+import { PrototypeProvider } from '@/prototype/PrototypeProvider'
 import { SearchPage } from '@/search/SearchPage'
 import { ThingDetailPage, ThingsIndexPage } from '@/things/ThingsPages'
 import { WatchDetailPage, WatchIndexPage } from '@/watch/WatchPages'
 
+const router = createBrowserRouter([
+  { path: '/', element: <Navigate to="/welcome" replace /> },
+  { path: '/welcome', element: <WelcomePage /> },
+  { path: '/auth/callback', element: <CallbackPage /> },
+  { path: '/households', element: <HouseholdChooserPage /> },
+  { path: '/invite/:token', element: <InviteClaimPage /> },
+  {
+    path: '/:householdId',
+    element: <AppShell />,
+    children: [
+      { path: 'home', element: <HomePage /> },
+      { path: 'search', element: <SearchPage /> },
+      { path: 'lists', element: <ListsIndexPage /> },
+      { path: 'lists/:listId', element: <ListDetailPage /> },
+      { path: 'notes', element: <NotesIndexPage /> },
+      { path: 'notes/:noteId', element: <NoteDetailPage /> },
+      { path: 'places', element: <PlacesIndexPage /> },
+      { path: 'places/:placeEntryId', element: <PlaceDetailPage /> },
+      { path: 'watch', element: <WatchIndexPage /> },
+      { path: 'watch/:watchEntryId', element: <WatchDetailPage /> },
+      { path: 'things', element: <ThingsIndexPage /> },
+      { path: 'things/:thingId', element: <ThingDetailPage /> },
+      { path: 'settings', element: <SettingsPage /> },
+    ],
+  },
+])
+
 export function AppRouter() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/welcome" replace />} />
-        <Route path="/welcome" element={<WelcomePage />} />
-        <Route path="/auth/callback" element={<CallbackPage />} />
-        <Route path="/households" element={<HouseholdChooserPage />} />
-        <Route path="/invite/:token" element={<InviteClaimPage />} />
-        <Route path="/:householdId" element={<AppShell />}>
-          <Route path="home" element={<HomePage />} />
-          <Route path="search" element={<SearchPage />} />
-          <Route path="lists" element={<ListsIndexPage />} />
-          <Route path="lists/:listId" element={<ListDetailPage />} />
-          <Route path="notes" element={<NotesIndexPage />} />
-          <Route path="notes/:noteId" element={<NoteDetailPage />} />
-          <Route path="places" element={<PlacesIndexPage />} />
-          <Route path="places/:placeEntryId" element={<PlaceDetailPage />} />
-          <Route path="watch" element={<WatchIndexPage />} />
-          <Route path="watch/:watchEntryId" element={<WatchDetailPage />} />
-          <Route path="things" element={<ThingsIndexPage />} />
-          <Route path="things/:thingId" element={<ThingDetailPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <PrototypeProvider>
+      <RouterProvider router={router} />
+    </PrototypeProvider>
   )
 }

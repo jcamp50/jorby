@@ -1,0 +1,15 @@
+---
+description: This GitHub repo is frontend and membership service only
+alwaysApply: true
+---
+
+# Repository scope
+
+This repository implements **only**:
+
+- `apps/web` — React frontend
+- `services/membership` — trusted invite/membership service
+
+Foundry Ontology, Actions, Functions, object security, and the generated OSDK are **specified** in `docs/product-decisions.md` and `docs/ontology-spec.md`. They are **not implemented in this repo**. Do not add Foundry project files, generated SDK packages, or Ontology definitions here.
+
+New documentation about this repo (UI, hosting, membership HTTP, local prototyping) belongs in `docs/this-repo/`, not in the Foundry ontology spec.

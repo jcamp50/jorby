@@ -1,8 +1,10 @@
 # Jorby frontend and membership-service agent handoff
 
-**Audience:** Agent or engineering team implementing the React OSDK frontend and trusted user/membership service  
+**Audience:** Agent or engineering team implementing the React frontend and trusted user/membership service in this GitHub repo  
 **Status:** Build contract  
 **Last updated:** 2026-09-05
+
+This repository implements the browser app and membership service only. Foundry Ontology is a separate backend. Local UI work currently uses mock data; see [docs/this-repo/](./this-repo/README.md).
 
 ## 1. Mission
 

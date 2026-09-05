@@ -68,7 +68,8 @@ Home is a thin orientation layer, not a separate data-entry product.
 | `D-AUTH-005` | Invite links/codes are copied by a member into any messaging app; Jorby does not send invitation email in v1.                                                                                                                                                                                   |
 | `D-AUTH-006` | Invitations expire after seven days and are single-use.                                                                                                                                                                                                                                         |
 | `D-AUTH-007` | The frontend is externally hosted while Foundry remains the application backend.                                                                                                                                                                                                                |
-| `D-AUTH-008` | The intended source layout is one GitHub monorepo containing the web application and membership service. This Foundry repository contains the current OSDK application and living specifications; the GitHub mirroring/canonical workflow must be established before production implementation. |
+| `D-AUTH-008` | This GitHub repository contains only the web application and membership service. Foundry remains the Ontology backend and is a separate project. |
+| `D-AUTH-009` | Docs that describe this GitHub codebase (UI prototype, web hosting, membership HTTP implementation) live in `docs/this-repo/`. Product and Ontology specs stay at `docs/` root. |
 
 ### 4.3 Archival, audit, and collaboration
 
