@@ -1,14 +1,33 @@
-import { ChevronRight, Search } from 'lucide-react'
+import { Clapperboard, ListTodo, MapPin, Package, Search, StickyNote } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
+import { CardGroup, LinkRow, RowList } from '@/components/jorby/card-group'
 import { EmptyState, ScreenHeader } from '@/components/jorby/screen'
-import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
+import { Tile } from '@/components/jorby/tile'
 import { Input } from '@/components/ui/input'
+import type { SectionId } from '@/lib/sections'
+import { FoundrySearch } from '@/osdk/FoundrySearch'
+import { usesFoundryData } from '@/osdk/household-route'
 import { usePrototype } from '@/prototype/PrototypeProvider'
+
+/** Search crosses every section, so each hit carries its own type's tone and glyph. */
+const hitStyle: Record<string, { tone: SectionId; icon: typeof MapPin }> = {
+  List: { tone: 'lists', icon: ListTodo },
+  Note: { tone: 'notes', icon: StickyNote },
+  Place: { tone: 'places', icon: MapPin },
+  Watch: { tone: 'watch', icon: Clapperboard },
+  Thing: { tone: 'things', icon: Package },
+}
 
 export function SearchPage() {
   const { householdId = '' } = useParams()
+  if (usesFoundryData(householdId)) {
+    return <FoundrySearch householdId={householdId} />
+  }
+  return <PrototypeSearch householdId={householdId} />
+}
+
+function PrototypeSearch({ householdId }: { householdId: string }) {
   const { search } = usePrototype()
   const [query, setQuery] = useState('')
   const results = useMemo(() => search(query), [query, search])
@@ -19,13 +38,13 @@ export function SearchPage() {
         title="Search"
         description="Household catalog only. Provider catalogs stay in the Add flow later."
       />
-      <div className="relative mb-4">
+      <div className="relative mb-5">
         <Search
-          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          className="pointer-events-none absolute top-1/2 left-4 size-[18px] -translate-y-1/2 text-muted-foreground"
           aria-hidden
         />
         <Input
-          className="h-12 pl-9"
+          className="h-13 rounded-full border-0 bg-card pl-11 shadow-card"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Lists, notes, places, watch, things"
@@ -40,26 +59,22 @@ export function SearchPage() {
       {query && results.length === 0 ? (
         <EmptyState>No matches in this household.</EmptyState>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {results.map((hit) => (
-            <li key={`${hit.kind}-${hit.id}`}>
-              <Card className="gap-0 py-0 transition-colors hover:bg-accent/40">
-                <Link
+        <CardGroup>
+          <RowList>
+            {results.map((hit) => {
+              const style = hitStyle[hit.kind] ?? { tone: 'home' as SectionId, icon: Search }
+              return (
+                <LinkRow
+                  key={`${hit.kind}-${hit.id}`}
                   to={`/${householdId}/${hit.hrefSuffix}`}
-                  className="flex min-h-16 items-center gap-3 px-4 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <Badge variant="secondary" className="mb-1.5">
-                      {hit.kind}
-                    </Badge>
-                    <p className="font-medium text-pretty">{hit.title}</p>
-                  </div>
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                </Link>
-              </Card>
-            </li>
-          ))}
-        </ul>
+                  leading={<Tile icon={style.icon} tone={style.tone} />}
+                  title={hit.title}
+                  subtitle={hit.kind}
+                />
+              )
+            })}
+          </RowList>
+        </CardGroup>
       )}
     </div>
   )

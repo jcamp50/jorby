@@ -1,20 +1,23 @@
-import { ChevronRight, Heart } from 'lucide-react'
+import { Heart, MapPin, Star } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { MemberMark } from '@/components/jorby/member-mark'
-import { Rating } from '@/components/jorby/rating'
+import { useParams } from 'react-router-dom'
+import { Stat } from '@/components/jorby/amount'
+import { CardGroup, LinkRow, Row, RowList } from '@/components/jorby/card-group'
+import { averageStars, ReviewGroup } from '@/components/jorby/review'
 import {
   BackLink,
   EmptyState,
   FilterChip,
   FilterRow,
+  HeroCard,
   ScreenHeader,
-  SectionHeading,
 } from '@/components/jorby/screen'
 import { NotFoundState } from '@/components/jorby/states'
+import { Tile } from '@/components/jorby/tile'
 import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
 import { householdPath, placeDetailPath } from '@/lib/routes'
+import { FoundryCatalogPending } from '@/osdk/FoundryCatalogPending'
+import { usesFoundryData } from '@/osdk/household-route'
 import { reviewSpread } from '@/prototype/model'
 import { usePrototype } from '@/prototype/PrototypeProvider'
 
@@ -30,6 +33,18 @@ const filters: { id: PlaceFilter; label: string }[] = [
 
 export function PlacesIndexPage() {
   const { householdId = '' } = useParams()
+  if (usesFoundryData(householdId)) {
+    return (
+      <FoundryCatalogPending
+        title="Places"
+        body="Places are not in the consumer SDK yet. Provider search will stay in Foundry Functions, not the browser."
+      />
+    )
+  }
+  return <PrototypePlacesIndex householdId={householdId} />
+}
+
+function PrototypePlacesIndex({ householdId }: { householdId: string }) {
   const { places, placeReviews } = usePrototype()
   const [filter, setFilter] = useState<PlaceFilter>('all')
 
@@ -72,34 +87,43 @@ export function PlacesIndexPage() {
       {visible.length === 0 ? (
         <EmptyState>Nothing matches this filter.</EmptyState>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {visible.map((place) => (
-            <li key={place.id}>
-              <Card className="gap-0 py-0 transition-colors hover:bg-accent/40">
-                <Link
+        <CardGroup>
+          <RowList>
+            {visible.map((place) => {
+              const average = averageStars(placeReviews[place.id] ?? [])
+              return (
+                <LinkRow
+                  key={place.id}
                   to={placeDetailPath(householdId, place.id)}
-                  className="flex min-h-16 items-center gap-3 px-4 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-2 font-medium">
-                      <span className="truncate">{place.name}</span>
+                  leading={<Tile icon={place.isFavorite ? Heart : MapPin} tone="places" />}
+                  title={place.name}
+                  subtitle={`${place.cuisine} · ${place.neighborhood}`}
+                  meta={
+                    <>
+                      <Badge variant="secondary" className="rounded-full">
+                        {place.visitState === 'WANT_TO_GO' ? 'Want to go' : 'Been'}
+                      </Badge>
                       {place.isFavorite ? (
-                        <Heart className="size-3.5 shrink-0 fill-current" aria-label="Favorite" />
+                        <Badge variant="secondary" className="rounded-full">
+                          Favorite
+                        </Badge>
                       ) : null}
-                    </p>
-                    <p className="text-sm text-muted-foreground text-pretty">
-                      {place.cuisine} · {place.neighborhood}
-                    </p>
-                    <Badge variant="secondary" className="mt-1.5">
-                      {place.visitState === 'WANT_TO_GO' ? 'Want to go' : 'Been'}
-                    </Badge>
-                  </div>
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                </Link>
-              </Card>
-            </li>
-          ))}
-        </ul>
+                    </>
+                  }
+                  trailing={
+                    average !== null ? (
+                      <span className="inline-flex items-center gap-1 text-sm font-semibold tabular-nums">
+                        <Star className="size-3.5 fill-current" aria-hidden />
+                        {average.toFixed(1)}
+                        <span className="sr-only">average stars out of 5</span>
+                      </span>
+                    ) : undefined
+                  }
+                />
+              )
+            })}
+          </RowList>
+        </CardGroup>
       )}
     </div>
   )
@@ -107,6 +131,24 @@ export function PlacesIndexPage() {
 
 export function PlaceDetailPage() {
   const { placeEntryId = '', householdId = '' } = useParams()
+  if (usesFoundryData(householdId)) {
+    return (
+      <FoundryCatalogPending
+        title="Places"
+        body="Places are not in the consumer SDK yet. Provider search will stay in Foundry Functions, not the browser."
+      />
+    )
+  }
+  return <PrototypePlaceDetail householdId={householdId} placeEntryId={placeEntryId} />
+}
+
+function PrototypePlaceDetail({
+  householdId,
+  placeEntryId,
+}: {
+  householdId: string
+  placeEntryId: string
+}) {
   const { places, placeReviews, members } = usePrototype()
   const place = places.find((item) => item.id === placeEntryId)
   const reviews = place ? (placeReviews[place.id] ?? []) : []
@@ -115,44 +157,56 @@ export function PlaceDetailPage() {
     return <NotFoundState backTo={householdPath(householdId, 'places')} backLabel="Places" />
   }
 
+  const average = averageStars(reviews)
+  const spread = reviewSpread(reviews)
+
   return (
     <div>
       <BackLink to={householdPath(householdId, 'places')} label="Places" />
       <ScreenHeader title={place.name} description={`${place.cuisine} · ${place.neighborhood}`} />
 
-      <div className="mb-6 flex flex-wrap gap-2">
-        <Badge variant="secondary">
-          {place.visitState === 'WANT_TO_GO' ? 'Want to go' : 'Been'}
-        </Badge>
-        {place.isFavorite ? <Badge variant="secondary">Favorite</Badge> : null}
-      </div>
-
-      {place.sharedNote ? (
-        <p className="mb-6 text-sm text-muted-foreground text-pretty">{place.sharedNote}</p>
-      ) : null}
-
-      <section>
-        <SectionHeading>Reviews</SectionHeading>
-        {reviews.length === 0 ? (
-          <EmptyState>Neither of us has reviewed this yet.</EmptyState>
+      <HeroCard eyebrow={average !== null ? 'Our rating' : 'Status'}>
+        {average !== null ? (
+          <>
+            <Stat value={average.toFixed(1)} unit="of 5" />
+            <p className="mt-1.5 text-[0.9375rem] font-medium text-white/85">
+              {spread !== null && spread >= 3
+                ? `We are ${spread / 2} stars apart on this one.`
+                : 'We agree on this one.'}
+            </p>
+          </>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {reviews.map((review) => {
-              const member = members.find((item) => item.id === review.membershipId)
-              return (
-                <Card key={review.membershipId} className="gap-2 py-4">
-                  <div className="flex items-center gap-2 px-4 text-sm">
-                    {member ? <MemberMark member={member} /> : null}
-                    <span className="font-medium">{member?.displayName}</span>
-                    <Rating halfStars={review.ratingHalfStars} className="ml-auto" />
-                  </div>
-                  <p className="px-4 text-sm text-pretty">{review.reviewText}</p>
-                </Card>
-              )
-            })}
-          </div>
+          <p className="text-lg font-semibold text-pretty">
+            {place.visitState === 'WANT_TO_GO'
+              ? 'We still want to go here.'
+              : 'We have been, but neither of us has reviewed it.'}
+          </p>
         )}
-      </section>
+      </HeroCard>
+
+      <CardGroup label="Details">
+        <RowList>
+          <Row
+            title="Visit state"
+            trailing={
+              <span className="text-sm font-semibold">
+                {place.visitState === 'WANT_TO_GO' ? 'Want to go' : 'Been'}
+              </span>
+            }
+          />
+          <Row
+            title="Favorite"
+            trailing={<span className="text-sm font-semibold">{place.isFavorite ? 'Yes' : 'No'}</span>}
+          />
+          {place.sharedNote ? <Row title="Our note" subtitle={place.sharedNote} wrap /> : null}
+        </RowList>
+      </CardGroup>
+
+      <ReviewGroup
+        reviews={reviews}
+        members={members}
+        emptyMessage="Neither of us has reviewed this yet."
+      />
     </div>
   )
 }

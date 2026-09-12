@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { thingLens } from '@/lib/thing-lifecycle'
 import { displayStarsFromHalfStars, isValidRatingHalfStars } from '@/lib/ratings'
 import { normalizeSearchText } from '@/lib/search'
-import { householdPath, invitePath, listDetailPath } from '@/lib/routes'
+import { financePath, householdAppsPath, householdPath, invitePath, listDetailPath } from '@/lib/routes'
 import { claimInviteInputSchema } from '@/membership-service/schemas'
 
 describe('thing lifecycle lenses', () => {
@@ -35,6 +35,11 @@ describe('search normalization', () => {
 describe('routes', () => {
   it('builds household-scoped paths', () => {
     expect(householdPath('hh-1', 'lists')).toBe('/hh-1/lists')
+    expect(householdAppsPath('hh-1')).toBe('/hh-1')
+    expect(financePath('hh-1')).toBe('/hh-1/finance')
+    expect(financePath('hh-1', 'activity')).toBe('/hh-1/finance/activity')
+    expect(financePath('hh-1', 'budgets')).toBe('/hh-1/finance/budgets')
+    expect(financePath('hh-1', 'bills')).toBe('/hh-1/finance/bills')
     expect(listDetailPath('hh-1', 'list-2')).toBe('/hh-1/lists/list-2')
     expect(invitePath('token')).toBe('/invite/token')
   })

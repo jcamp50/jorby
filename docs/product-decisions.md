@@ -1,7 +1,7 @@
 # Jorby product decisions
 
 **Status:** Living decision register  
-**Last updated:** 2026-09-05  
+**Last updated:** 2026-09-06  
 **Product:** Jorby v1
 
 ## 1. Product statement
@@ -16,13 +16,18 @@ The interface is optimized for couples, but the domain model supports any househ
 2. **Search to add culture; type to add life.** Places and watch titles come from provider search. Lists, notes, dishes, and things are entered by people.
 3. **Status belongs on the record.** Want, watched, owned, gifted, and related states are lifecycle values, not separate products.
 4. **Household-visible by default.** All v1 household content is visible to every active household member.
-5. **Money waits.** A Thing may have a price, but v1 has no transactions, budgets, bank data, or ledgers.
+5. **Money is a separate household app.** Finance is not a seventh catalog tab. It is household-scoped, mock-first, and has no bank connections or Foundry ledger yet.
 6. **Actions, not arbitrary writes.** Every consumer mutation passes through a governed action or trusted membership workflow.
 7. **Mobile first, not mobile only.** The primary experience is a responsive PWA that remains useful on desktop.
 
 ## 3. Confirmed information architecture
 
-Primary navigation:
+After a household is chosen, the person picks an **app**:
+
+1. **Jorby Home** — life catalog
+2. **Jorby Finance** — household money (mock UI)
+
+Home catalog navigation:
 
 1. Home
 2. Lists
@@ -31,12 +36,17 @@ Primary navigation:
 5. Watch
 6. Things
 
-Later modules, excluded from v1 navigation:
+Finance navigation (first mock):
 
-- Money
-- Together
+1. Home
+2. Spend
+3. Budgets
+4. Goals
+5. Bills
 
-Home is a thin orientation layer, not a separate data-entry product.
+Together remains excluded.
+
+Home catalog Home is a thin orientation layer, not a separate data-entry product.
 
 ## 4. Confirmed decisions
 
@@ -166,9 +176,19 @@ Home is a thin orientation layer, not a separate data-entry product.
 | `D-UI-003` | Use Tailwind CSS, accessible headless primitives, and shadcn components.    |
 | `D-UI-004` | Use `@osdk/react` for new OSDK reads, Actions, and subscriptions.           |
 
+### 4.11 Money / Finance (mock)
+
+| ID            | Decision                                                                                                                                                         |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `D-MONEY-001` | Finance is a separate household-tied app mode, not a tab inside Jorby Home.                                                                                      |
+| `D-MONEY-002` | After household selection, the person chooses Jorby Home or Jorby Finance. Both modes can switch back through an apps control.                                   |
+| `D-MONEY-003` | The Finance mock is a joint household money picture: bank accounts, card transactions, budgets, saving goals, and subscriptions. Default view is the household; a member can switch to their own accounts and spend. It is not a shared pot or IOU/settlement product. |
+| `D-MONEY-004` | Seeded Finance numbers exist only on the `our-home` mock household. A live Foundry household must not show Jordan/Sam money.                                     |
+| `D-MONEY-005` | No consumer SDK money Actions, bank aggregation, or Ontology money objects until those are specified and generated.                                              |
+
 ## 5. Explicit v1 exclusions
 
-- Money, transactions, budgeting, bank connections, or spending charts.
+- Bank connections, cards, overdrafts, cashback, or institution aggregation.
 - Together, trips as a first-class type, memories, shared calendar, or date-night events.
 - Private Notes or private Lists.
 - Surprise-gift hiding.
@@ -190,7 +210,7 @@ Home is a thin orientation layer, not a separate data-entry product.
 - Recurring grocery lists.
 - Map-first Places experience.
 - Notifications.
-- Money module.
+- Foundry-backed Money objects, Actions, and Functions.
 - Together module.
 - More advanced search ranking.
 - Scheduled provider refresh.

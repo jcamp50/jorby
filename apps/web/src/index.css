@@ -1,9 +1,12 @@
+@import '@fontsource-variable/plus-jakarta-sans';
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -22,53 +25,177 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Resolved from the active [data-section], so `bg-section` follows the route. */
+  --color-section: var(--section);
+  --color-section-wash: var(--section-wash);
+  --color-section-ink: var(--section-ink);
+
+  /* Member identity, resolved from the nearest [data-member-color]. */
+  --color-member: var(--member);
+  --color-member-ink: var(--member-ink);
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: calc(var(--radius) - 2px);
+  --radius-xl: var(--radius);
+  --radius-2xl: calc(var(--radius) + 6px);
+
+  --shadow-card: 0 1px 2px oklch(0.2 0.02 60 / 0.05), 0 12px 28px -16px oklch(0.2 0.02 60 / 0.22);
+  --shadow-float: 0 2px 6px oklch(0.2 0.02 60 / 0.06), 0 16px 40px -18px oklch(0.2 0.02 60 / 0.3);
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.147 0.004 49.25);
+  --radius: 0.875rem;
+
+  /* The floating tab bar's full footprint: pill height, its own margin, and the
+     iOS home-indicator inset. Sticky page actions and toasts sit above this. */
+  --tab-bar-space: calc(4.25rem + 1rem + env(safe-area-inset-bottom));
+
+  /* Warm off-white, so the section wash has something to fade into. */
+  --background: oklch(0.983 0.005 75);
+  --foreground: oklch(0.24 0.012 60);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.147 0.004 49.25);
+  --card-foreground: oklch(0.24 0.012 60);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.147 0.004 49.25);
-  --primary: oklch(0.216 0.006 56.043);
-  --primary-foreground: oklch(0.985 0.001 106.423);
-  --secondary: oklch(0.97 0.001 106.424);
-  --secondary-foreground: oklch(0.216 0.006 56.043);
-  --muted: oklch(0.97 0.001 106.424);
-  --muted-foreground: oklch(0.553 0.013 58.071);
-  --accent: oklch(0.97 0.001 106.424);
-  --accent-foreground: oklch(0.216 0.006 56.043);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.923 0.003 48.717);
-  --input: oklch(0.923 0.003 48.717);
-  --ring: oklch(0.709 0.01 56.259);
+  --popover-foreground: oklch(0.24 0.012 60);
+  --primary: oklch(0.28 0.015 60);
+  --primary-foreground: oklch(0.99 0.003 75);
+  --secondary: oklch(0.955 0.006 75);
+  --secondary-foreground: oklch(0.3 0.014 60);
+  --muted: oklch(0.955 0.006 75);
+  --muted-foreground: oklch(0.53 0.014 62);
+  --accent: oklch(0.955 0.008 70);
+  --accent-foreground: oklch(0.28 0.015 60);
+  --destructive: oklch(0.58 0.2 27);
+  --border: oklch(0.915 0.005 75);
+  --input: oklch(0.9 0.006 75);
+  --ring: oklch(0.7 0.03 60);
+
+  /* One hue per content type. Tiles reference these directly so a Place looks
+     the same on Home as it does in Places; [data-section] aliases them below
+     for the current route's wash and active states. */
+  --tone-home: oklch(0.64 0.17 32);
+  --tone-home-wash: oklch(0.89 0.075 45);
+  --tone-home-ink: oklch(0.44 0.13 32);
+
+  --tone-lists: oklch(0.56 0.15 253);
+  --tone-lists-wash: oklch(0.9 0.055 250);
+  --tone-lists-ink: oklch(0.42 0.13 253);
+
+  --tone-notes: oklch(0.66 0.14 68);
+  --tone-notes-wash: oklch(0.92 0.07 82);
+  --tone-notes-ink: oklch(0.45 0.1 62);
+
+  --tone-places: oklch(0.56 0.12 160);
+  --tone-places-wash: oklch(0.91 0.055 162);
+  --tone-places-ink: oklch(0.41 0.09 160);
+
+  --tone-watch: oklch(0.55 0.16 300);
+  --tone-watch-wash: oklch(0.9 0.06 300);
+  --tone-watch-ink: oklch(0.42 0.14 300);
+
+  --tone-things: oklch(0.57 0.11 205);
+  --tone-things-wash: oklch(0.91 0.05 205);
+  --tone-things-ink: oklch(0.42 0.09 205);
+
+  /* Finance is a separate app, not a seventh catalog tab. Darker pine so it
+     reads as a different product from Home coral and Places mint. */
+  --tone-finance: oklch(0.4 0.07 165);
+  --tone-finance-wash: oklch(0.9 0.04 165);
+  --tone-finance-ink: oklch(0.3 0.06 165);
+
+  /* Fallback; [data-section] overrides per route. */
+  --section: var(--tone-home);
+  --section-wash: var(--tone-home-wash);
+  --section-ink: var(--tone-home-ink);
+
+  /* Member identity. Pale fill, dark same-hue ink, so initials stay legible small. */
+  --member-clay: oklch(0.88 0.065 42);
+  --member-clay-ink: oklch(0.44 0.12 38);
+  --member-sage: oklch(0.89 0.055 155);
+  --member-sage-ink: oklch(0.41 0.08 158);
+  --member-indigo: oklch(0.89 0.055 275);
+  --member-indigo-ink: oklch(0.44 0.13 275);
+  --member-amber: oklch(0.91 0.075 85);
+  --member-amber-ink: oklch(0.46 0.11 68);
+
+  --member: var(--member-clay);
+  --member-ink: var(--member-clay-ink);
+}
+
+[data-section='home'] {
+  --section: var(--tone-home);
+  --section-wash: var(--tone-home-wash);
+  --section-ink: var(--tone-home-ink);
+}
+[data-section='lists'] {
+  --section: var(--tone-lists);
+  --section-wash: var(--tone-lists-wash);
+  --section-ink: var(--tone-lists-ink);
+}
+[data-section='notes'] {
+  --section: var(--tone-notes);
+  --section-wash: var(--tone-notes-wash);
+  --section-ink: var(--tone-notes-ink);
+}
+[data-section='places'] {
+  --section: var(--tone-places);
+  --section-wash: var(--tone-places-wash);
+  --section-ink: var(--tone-places-ink);
+}
+[data-section='watch'] {
+  --section: var(--tone-watch);
+  --section-wash: var(--tone-watch-wash);
+  --section-ink: var(--tone-watch-ink);
+}
+[data-section='things'] {
+  --section: var(--tone-things);
+  --section-wash: var(--tone-things-wash);
+  --section-ink: var(--tone-things-ink);
+}
+[data-section='finance'] {
+  --section: var(--tone-finance);
+  --section-wash: var(--tone-finance-wash);
+  --section-ink: var(--tone-finance-ink);
+}
+
+[data-member-color='clay'] {
+  --member: var(--member-clay);
+  --member-ink: var(--member-clay-ink);
+}
+[data-member-color='sage'] {
+  --member: var(--member-sage);
+  --member-ink: var(--member-sage-ink);
+}
+[data-member-color='indigo'] {
+  --member: var(--member-indigo);
+  --member-ink: var(--member-indigo-ink);
+}
+[data-member-color='amber'] {
+  --member: var(--member-amber);
+  --member-ink: var(--member-amber-ink);
 }
 
 .dark {
-  --background: oklch(0.147 0.004 49.25);
-  --foreground: oklch(0.985 0.001 106.423);
-  --card: oklch(0.216 0.006 56.043);
-  --card-foreground: oklch(0.985 0.001 106.423);
-  --popover: oklch(0.216 0.006 56.043);
-  --popover-foreground: oklch(0.985 0.001 106.423);
-  --primary: oklch(0.923 0.003 48.717);
-  --primary-foreground: oklch(0.216 0.006 56.043);
-  --secondary: oklch(0.268 0.007 34.298);
-  --secondary-foreground: oklch(0.985 0.001 106.423);
-  --muted: oklch(0.268 0.007 34.298);
-  --muted-foreground: oklch(0.709 0.01 56.259);
-  --accent: oklch(0.268 0.007 34.298);
-  --accent-foreground: oklch(0.985 0.001 106.423);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.553 0.013 58.071);
+  --background: oklch(0.19 0.01 65);
+  --foreground: oklch(0.97 0.004 75);
+  --card: oklch(0.25 0.012 65);
+  --card-foreground: oklch(0.97 0.004 75);
+  --popover: oklch(0.25 0.012 65);
+  --popover-foreground: oklch(0.97 0.004 75);
+  --primary: oklch(0.93 0.006 75);
+  --primary-foreground: oklch(0.24 0.012 60);
+  --secondary: oklch(0.3 0.012 65);
+  --secondary-foreground: oklch(0.97 0.004 75);
+  --muted: oklch(0.3 0.012 65);
+  --muted-foreground: oklch(0.72 0.012 70);
+  --accent: oklch(0.3 0.012 65);
+  --accent-foreground: oklch(0.97 0.004 75);
+  --destructive: oklch(0.7 0.19 22);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.6 0.02 70);
 }
 
 @layer base {
@@ -83,7 +210,13 @@
 
   body {
     @apply bg-background text-foreground;
-    /* Stop the whole page rubber-banding behind the fixed tab bar. */
+    font-family: var(--font-sans);
+    /* Stop the whole page rubber-banding behind the floating tab bar. */
     overscroll-behavior-y: none;
+  }
+
+  /* Numbers are focal in this design; keep them from shifting width. */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 }

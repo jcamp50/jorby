@@ -4,7 +4,7 @@ React + Vite + TypeScript shell for the Jorby PWA.
 
 Living specs: [../../docs/README.md](../../docs/README.md)
 
-Generated Foundry OSDK and `@osdk/react` are intentionally not installed yet. Install them only after compatible package versions and generated resource names are confirmed.
+Public `@osdk/*` packages are installed. `@jorby/sdk` is the private consumer package and needs `FOUNDRY_TOKEN` at install time. See [../../docs/this-repo/foundry-osdk.md](../../docs/this-repo/foundry-osdk.md).
 
 ```bash
 npm install

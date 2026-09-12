@@ -1,21 +1,25 @@
-import { Check, ChevronRight, Minus } from 'lucide-react'
+import { Check, Clapperboard, Film, Minus, Tv } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
+import { CardGroup, LinkRow, Row, RowList } from '@/components/jorby/card-group'
 import { MemberMark } from '@/components/jorby/member-mark'
-import { Rating } from '@/components/jorby/rating'
+import { ReviewGroup } from '@/components/jorby/review'
 import {
   BackLink,
   EmptyState,
   FilterChip,
   FilterRow,
+  HeroCard,
   ScreenHeader,
-  SectionHeading,
+  StickyActions,
 } from '@/components/jorby/screen'
 import { NotFoundState } from '@/components/jorby/states'
+import { Tile } from '@/components/jorby/tile'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { householdPath, watchDetailPath } from '@/lib/routes'
+import { FoundryCatalogPending } from '@/osdk/FoundryCatalogPending'
+import { usesFoundryData } from '@/osdk/household-route'
 import { everyoneWants } from '@/prototype/model'
 import { usePrototype } from '@/prototype/PrototypeProvider'
 
@@ -23,6 +27,18 @@ const statuses = ['WATCHLIST', 'WATCHING', 'WATCHED', 'DROPPED'] as const
 
 export function WatchIndexPage() {
   const { householdId = '' } = useParams()
+  if (usesFoundryData(householdId)) {
+    return (
+      <FoundryCatalogPending
+        title="Watch"
+        body="Watch entries are not in the consumer SDK yet. TMDB search will stay in Foundry Functions."
+      />
+    )
+  }
+  return <PrototypeWatchIndex householdId={householdId} />
+}
+
+function PrototypeWatchIndex({ householdId }: { householdId: string }) {
   const { watch, members } = usePrototype()
   const [status, setStatus] = useState<(typeof statuses)[number] | 'ALL'>('ALL')
   const visible = useMemo(
@@ -46,32 +62,36 @@ export function WatchIndexPage() {
       {visible.length === 0 ? (
         <EmptyState>Nothing matches this filter.</EmptyState>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {visible.map((entry) => (
-            <li key={entry.id}>
-              <Card className="gap-0 py-0 transition-colors hover:bg-accent/40">
-                <Link
-                  to={watchDetailPath(householdId, entry.id)}
-                  className="flex min-h-16 items-center gap-3 px-4 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-pretty">{entry.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {entry.year} · {entry.mediaType === 'SHOW' ? 'Show' : 'Movie'}
-                    </p>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      <Badge variant="secondary" className="capitalize">
-                        {entry.status.toLowerCase()}
-                      </Badge>
-                      {everyoneWants(entry, members.length) ? <Badge>Everyone wants</Badge> : null}
-                    </div>
-                  </div>
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                </Link>
-              </Card>
-            </li>
-          ))}
-        </ul>
+        <CardGroup>
+          <RowList>
+            {visible.map((entry) => (
+              <LinkRow
+                key={entry.id}
+                to={watchDetailPath(householdId, entry.id)}
+                leading={<Tile icon={entry.mediaType === 'SHOW' ? Tv : Film} tone="watch" />}
+                title={entry.title}
+                subtitle={`${entry.year} · ${entry.mediaType === 'SHOW' ? 'Show' : 'Movie'}`}
+                meta={
+                  <>
+                    <Badge variant="secondary" className="rounded-full capitalize">
+                      {entry.status.toLowerCase()}
+                    </Badge>
+                    {everyoneWants(entry, members.length) ? (
+                      <Badge className="rounded-full">Both want it</Badge>
+                    ) : null}
+                  </>
+                }
+                trailing={
+                  entry.mediaType === 'SHOW' && entry.lastWatchedSeasonNumber ? (
+                    <span className="text-sm font-semibold tabular-nums">
+                      S{entry.lastWatchedSeasonNumber}·E{entry.lastWatchedEpisodeNumber}
+                    </span>
+                  ) : undefined
+                }
+              />
+            ))}
+          </RowList>
+        </CardGroup>
       )}
     </div>
   )
@@ -79,6 +99,24 @@ export function WatchIndexPage() {
 
 export function WatchDetailPage() {
   const { watchEntryId = '', householdId = '' } = useParams()
+  if (usesFoundryData(householdId)) {
+    return (
+      <FoundryCatalogPending
+        title="Watch"
+        body="Watch entries are not in the consumer SDK yet. TMDB search will stay in Foundry Functions."
+      />
+    )
+  }
+  return <PrototypeWatchDetail householdId={householdId} watchEntryId={watchEntryId} />
+}
+
+function PrototypeWatchDetail({
+  householdId,
+  watchEntryId,
+}: {
+  householdId: string
+  watchEntryId: string
+}) {
   const { watch, members, currentMembershipId, toggleWantToWatch } = usePrototype()
   const entry = watch.find((item) => item.id === watchEntryId)
 
@@ -87,6 +125,7 @@ export function WatchDetailPage() {
   }
 
   const wants = entry.wantsMembershipIds.includes(currentMembershipId)
+  const bothWant = everyoneWants(entry, members.length)
 
   return (
     <div>
@@ -96,78 +135,87 @@ export function WatchDetailPage() {
         description={`${entry.year} · ${entry.mediaType === 'SHOW' ? 'Show' : 'Movie'}`}
       />
 
-      <div className="mb-6 flex flex-wrap gap-2">
-        <Badge variant="secondary" className="capitalize">
-          {entry.status.toLowerCase()}
-        </Badge>
-        {entry.mediaType === 'SHOW' && entry.lastWatchedSeasonNumber ? (
-          <Badge variant="outline">
-            Up to S{entry.lastWatchedSeasonNumber} E{entry.lastWatchedEpisodeNumber}
-          </Badge>
-        ) : null}
-      </div>
+      <HeroCard eyebrow="Who wants it">
+        <p className="text-2xl font-bold tracking-tight text-pretty">
+          {bothWant
+            ? 'You both want to watch this.'
+            : `${entry.wantsMembershipIds.length} of ${members.length} said yes.`}
+        </p>
+        <p className="mt-1.5 text-[0.9375rem] font-medium text-white/85">
+          A missing answer is not a yes.
+        </p>
+      </HeroCard>
 
-      <Button
-        type="button"
-        size="lg"
-        variant={wants ? 'default' : 'outline'}
-        aria-pressed={wants}
-        className="h-12 w-full sm:w-auto"
-        onClick={() => toggleWantToWatch(entry.id)}
-      >
-        {wants ? 'You want to watch this' : 'I want to watch this'}
-      </Button>
-
-      <section className="mt-6">
-        <SectionHeading>
-          {everyoneWants(entry, members.length)
-            ? 'Everyone wants this'
-            : `${entry.wantsMembershipIds.length} of ${members.length} want this`}
-        </SectionHeading>
-        <ul className="space-y-2">
+      <CardGroup label="Us">
+        <RowList>
           {members.map((member) => {
             const memberWants = entry.wantsMembershipIds.includes(member.id)
             return (
-              <li
+              <Row
                 key={member.id}
-                className="flex min-h-12 items-center gap-2 rounded-lg border px-4 text-sm"
-              >
-                <MemberMark member={member} />
-                <span className="font-medium">{member.displayName}</span>
-                <span className="ml-auto flex items-center gap-1.5 text-muted-foreground">
-                  {memberWants ? (
-                    <Check className="size-4" aria-hidden />
-                  ) : (
-                    <Minus className="size-4" aria-hidden />
-                  )}
-                  {memberWants ? 'Wants it' : 'Has not said yes'}
-                </span>
-              </li>
+                leading={<MemberMark member={member} size="default" />}
+                title={member.displayName}
+                trailing={
+                  <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                    {memberWants ? (
+                      <Check className="size-4" aria-hidden />
+                    ) : (
+                      <Minus className="size-4" aria-hidden />
+                    )}
+                    {memberWants ? 'Wants it' : 'Has not said yes'}
+                  </span>
+                }
+              />
             )
           })}
-        </ul>
-      </section>
+        </RowList>
+      </CardGroup>
+
+      <CardGroup label="Details">
+        <RowList>
+          <Row
+            leading={<Tile icon={Clapperboard} tone="watch" variant="soft" />}
+            title="Status"
+            trailing={
+              <span className="text-sm font-semibold capitalize">{entry.status.toLowerCase()}</span>
+            }
+          />
+          {entry.mediaType === 'SHOW' ? (
+            <Row
+              leading={<Tile icon={Tv} tone="watch" variant="soft" />}
+              title="Progress"
+              trailing={
+                <span className="text-sm font-semibold tabular-nums">
+                  {entry.lastWatchedSeasonNumber
+                    ? `S${entry.lastWatchedSeasonNumber} · E${entry.lastWatchedEpisodeNumber}`
+                    : 'Not started'}
+                </span>
+              }
+            />
+          ) : null}
+        </RowList>
+      </CardGroup>
 
       {entry.reviews.length > 0 ? (
-        <section className="mt-6">
-          <SectionHeading>Reviews</SectionHeading>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {entry.reviews.map((review) => {
-              const member = members.find((item) => item.id === review.membershipId)
-              return (
-                <Card key={review.membershipId} className="gap-2 py-4">
-                  <div className="flex items-center gap-2 px-4 text-sm">
-                    {member ? <MemberMark member={member} /> : null}
-                    <span className="font-medium">{member?.displayName}</span>
-                    <Rating halfStars={review.ratingHalfStars} className="ml-auto" />
-                  </div>
-                  <p className="px-4 text-sm text-pretty">{review.reviewText}</p>
-                </Card>
-              )
-            })}
-          </div>
-        </section>
+        <ReviewGroup
+          reviews={entry.reviews}
+          members={members}
+          emptyMessage="Neither of us has reviewed this yet."
+        />
       ) : null}
+
+      <StickyActions>
+        <Button
+          type="button"
+          size="lg"
+          variant={wants ? 'default' : 'outline'}
+          aria-pressed={wants}
+          className="h-11 w-full rounded-full"
+          onClick={() => toggleWantToWatch(entry.id)}
+        >
+          {wants ? 'You want to watch this' : 'I want to watch this'}
+        </Button>
+      </StickyActions>
     </div>
   )
 }

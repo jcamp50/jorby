@@ -19,6 +19,8 @@ jobs:
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
       - run: npm ci
+        env:
+          FOUNDRY_TOKEN: ${{ secrets.FOUNDRY_TOKEN }}
       - run: npm run lint
       - run: npm run test
       - run: npm run build

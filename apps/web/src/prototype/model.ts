@@ -2,11 +2,15 @@ import type { ThingLifecycleState } from '@/lib/thing-lifecycle'
 
 export const PROTOTYPE_HOUSEHOLD_ID = 'our-home'
 
+/** Maps to the Ontology's `profileColor`; each value selects a token pair in index.css. */
+export type ProfileColor = 'clay' | 'sage' | 'indigo' | 'amber'
+
 export type Member = {
   id: string
   displayName: string
   initials: string
   profileLabel: string
+  profileColor: ProfileColor
   avatarUrl?: string | null
 }
 
@@ -66,7 +70,8 @@ export type ThingRecord = {
   id: string
   name: string
   lifecycleState: ThingLifecycleState
-  priceLabel?: string
+  priceAmount?: number
+  priceCurrency?: string
   recipientLabel?: string
   storageLocation?: string
   notes?: string
@@ -89,15 +94,17 @@ export type PrototypeState = {
 export const jordan: Member = {
   id: 'mem-jordan',
   displayName: 'Jordan',
-  initials: 'J',
+  initials: 'JO',
   profileLabel: 'Clay',
+  profileColor: 'clay',
 }
 
 export const sam: Member = {
   id: 'mem-sam',
   displayName: 'Sam',
-  initials: 'S',
+  initials: 'SA',
   profileLabel: 'Sage',
+  profileColor: 'sage',
 }
 
 export function createSeedState(): PrototypeState {
@@ -230,7 +237,8 @@ export function createSeedState(): PrototypeState {
         id: 'thing-espresso',
         name: 'Profitec Go',
         lifecycleState: 'IDEA',
-        priceLabel: '$900',
+        priceAmount: 899,
+        priceCurrency: 'USD',
         recipientLabel: 'Us',
         reservedByMembershipId: sam.id,
         assigneeMembershipId: null,

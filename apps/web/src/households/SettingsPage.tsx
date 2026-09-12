@@ -1,79 +1,88 @@
-import { Copy } from 'lucide-react'
+import { Copy, Users } from 'lucide-react'
 import { toast } from 'sonner'
+import { CardGroup, Row, RowList } from '@/components/jorby/card-group'
 import { MemberMark } from '@/components/jorby/member-mark'
-import { ScreenHeader, SectionHeading } from '@/components/jorby/screen'
+import { ScreenHeader } from '@/components/jorby/screen'
+import { Tile } from '@/components/jorby/tile'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { AppErrorCode, errorMessage } from '@/lib/errors'
+import { useParams } from 'react-router-dom'
+import { FoundrySettings } from '@/osdk/FoundrySettings'
+import { usesFoundryData } from '@/osdk/household-route'
 import { usePrototype } from '@/prototype/PrototypeProvider'
 
 export function SettingsPage() {
+  const { householdId = '' } = useParams()
+  if (usesFoundryData(householdId)) {
+    return <FoundrySettings householdId={householdId} />
+  }
+  return <PrototypeSettings />
+}
+
+function PrototypeSettings() {
   const { members, currentMembershipId, setCurrentMember } = usePrototype()
 
   return (
-    <div className="space-y-8">
+    <div>
       <ScreenHeader
         title="Household"
         description="Members are equal. View-as is prototype-only so you can see both voices."
       />
 
-      <section>
-        <SectionHeading>Members</SectionHeading>
-        <ul className="space-y-2">
+      <CardGroup label="Members">
+        <RowList>
           {members.map((member) => (
-            <li
+            <Row
               key={member.id}
-              className="flex min-h-14 flex-wrap items-center gap-3 rounded-lg border px-4 py-2"
-            >
-              <MemberMark member={member} size="default" />
-              <span className="min-w-0">
-                <span className="block font-medium">{member.displayName}</span>
-                <span className="block text-sm text-muted-foreground">{member.profileLabel}</span>
-              </span>
-              {member.id === currentMembershipId ? (
-                <Badge variant="secondary" className="ml-auto">
-                  Viewing as
-                </Badge>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="ml-auto h-11"
-                  onClick={() => setCurrentMember(member.id)}
-                >
-                  View as {member.displayName}
-                </Button>
-              )}
-            </li>
+              leading={<MemberMark member={member} size="default" />}
+              title={member.displayName}
+              subtitle={member.profileLabel}
+              trailing={
+                member.id === currentMembershipId ? (
+                  <Badge variant="secondary" className="rounded-full">
+                    Viewing as
+                  </Badge>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 rounded-full"
+                    onClick={() => setCurrentMember(member.id)}
+                  >
+                    View as {member.displayName}
+                  </Button>
+                )
+              }
+            />
           ))}
-        </ul>
-      </section>
+        </RowList>
+      </CardGroup>
 
-      <section>
-        <SectionHeading>Invite</SectionHeading>
-        <Card>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground text-pretty">
-              Production invites come from the membership service. This copy is a fake link.
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 w-full sm:w-auto"
-              onClick={() => {
-                navigator.clipboard
-                  .writeText('https://jorby.local/invite/prototype-token')
-                  .then(() => toast.success('Invite link copied.'))
-                  .catch(() => toast.error(errorMessage(AppErrorCode.UNKNOWN)))
-              }}
-            >
-              <Copy aria-hidden />
-              Copy invite link
-            </Button>
-          </CardContent>
-        </Card>
-      </section>
+      <CardGroup label="Invite">
+        <Row
+          leading={<Tile icon={Users} tone="home" variant="soft" />}
+          title="Invite link"
+          subtitle="Production invites come from the membership service. This copy is a fake link."
+          wrap
+        />
+        <div className="px-4 pb-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full rounded-full"
+            onClick={() => {
+              navigator.clipboard
+                .writeText('https://jorby.local/invite/prototype-token')
+                .then(() => toast.success('Invite link copied.'))
+                .catch(() => toast.error(errorMessage(AppErrorCode.UNKNOWN)))
+            }}
+          >
+            <Copy aria-hidden />
+            Copy invite link
+          </Button>
+        </div>
+      </CardGroup>
     </div>
   )
 }

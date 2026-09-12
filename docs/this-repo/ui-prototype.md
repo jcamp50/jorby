@@ -6,9 +6,9 @@
 
 ## Purpose
 
-Give a clickable, mobile-first walkthrough of Home, Lists, Notes, Places, Watch, Things, Search, and Household settings **without** Foundry, OSDK, or the membership service.
+Give a clickable, mobile-first walkthrough of Jorby Home (Lists, Notes, Places, Watch, Things, Search, settings) and Jorby Finance **without** Foundry money objects or bank connections.
 
-See [design-system.md](./design-system.md) for how shadcn is installed and the mobile rules each screen must satisfy.
+See [design-direction.md](./design-direction.md) for the visual language and [design-system.md](./design-system.md) for shadcn install and mobile rules.
 
 ## What is real
 
@@ -23,8 +23,9 @@ See [design-system.md](./design-system.md) for how shadcn is installed and the m
 
 ## What is fake
 
-- All data is in-memory mock state (`PrototypeProvider`)
-- There is no OAuth; Welcome continues straight into the prototype household
+- Seeded Jordan/Sam catalog and finance data exists only on `/our-home/…`. A Foundry household URL must not show it
+- After entering a household, `/our-home` asks Home vs Finance. Finance uses a separate shell at `/our-home/finance` with Household / Jordan / Sam views over accounts, spend, budgets, goals, and bills
+- Welcome can start Foundry OAuth when root `.env` is present; “Enter mock household” is a labeled escape hatch
 - A “View as” control in Household settings switches which mock member you are
 - Provider search (Places / Watch) is not connected; entries are seeded
 - Reloading the page resets mock data
@@ -33,6 +34,6 @@ See [design-system.md](./design-system.md) for how shadcn is installed and the m
 
 ## Out of scope for this prototype
 
-- Money, Together, uploads, offline writes
+- Bank connections, Together, uploads, offline writes
 - Calling Google Places or TMDB from the browser
 - Treating `householdId` in the URL as authorization

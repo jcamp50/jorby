@@ -31,7 +31,7 @@ The trusted membership service must provide:
 - Empty-Household archival.
 - Admin-only recovery/purge hooks.
 
-Do not expand into Money, Together, uploaded media, or social features.
+Finance mock UI is approved as a separate household app. Do not add bank connections, Foundry money objects, Together, uploaded media, or social features.
 
 ## 2. Mandatory reading and precedence
 
@@ -813,7 +813,7 @@ Every implementation pull request must answer:
 - Do not use floating-point star values as the persisted rating.
 - Do not overwrite Note content without lock and revision validation.
 - Do not expose whether inaccessible Household objects exist.
-- Do not add offline writes, Money, Together, photos, social features, or surprise-gift privacy without an approved decision.
+- Do not add offline writes, bank connections, Foundry money objects, Together, photos, social features, or surprise-gift privacy without an approved decision.
 
 ## 21. Definition of frontend/service readiness
 

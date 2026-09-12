@@ -22,7 +22,7 @@ This directory is the product and technical source of truth for Jorby. Update th
 1. [Product decisions](./product-decisions.md) — confirmed scope, behavior, and unresolved platform checks.
 2. [Ontology specification](./ontology-spec.md) — object types, properties, keys, links, interfaces, and invariants (Foundry).
 3. [Frontend and membership-service agent handoff](./frontend-and-membership-agent-handoff.md) — production build contract for this repo.
-4. [This repository](./this-repo/README.md) — GitHub-only notes, including the [UI prototype](./this-repo/ui-prototype.md).
+4. [This repository](./this-repo/README.md) — GitHub-only notes, including the [design direction](./this-repo/design-direction.md) and [UI prototype](./this-repo/ui-prototype.md).
 
 ## Document precedence
 
@@ -56,4 +56,4 @@ The v1 product is a private shared-life catalog with these primary sections:
 - Watch
 - Things
 
-Money and Together are intentionally later modules and must not shape or expand the first implementation without a new approved decision.
+Jorby Finance is an approved mock app mode, still household-scoped and not Foundry-backed. Together, uploads, and social features stay out without a new approved decision.

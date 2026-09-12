@@ -11,4 +11,4 @@ Read:
 
 New docs about this repo go in `docs/this-repo/`.
 
-Do not expand into Money, Together, uploaded media, or social features without an approved decision.
+Money/Finance mock UI is approved as a separate household-tied app mode (`D-MONEY-*`). Do not add bank connections, Foundry money objects, or Together / uploads / social features without a new approved decision.

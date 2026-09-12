@@ -23,6 +23,11 @@ const routes = [
   'things',
   'things/thing-espresso',
   'settings',
+  'finance',
+  'finance/activity',
+  'finance/budgets',
+  'finance/goals',
+  'finance/bills',
 ]
 
 async function gotoReady(page: Page, route: string) {

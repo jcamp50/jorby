@@ -1,20 +1,30 @@
-import { ChevronRight } from 'lucide-react'
+import { StickyNote } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useBlocker, useParams } from 'react-router-dom'
-import { BackLink, EmptyState, ScreenHeader } from '@/components/jorby/screen'
+import { useBlocker, useParams } from 'react-router-dom'
+import { CardGroup, LinkRow, RowList } from '@/components/jorby/card-group'
+import { BackLink, EmptyState, ScreenHeader, StickyActions } from '@/components/jorby/screen'
 import { NotFoundState } from '@/components/jorby/states'
-import { toastResult } from '@/lib/action-toast'
+import { Tile } from '@/components/jorby/tile'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { toastResult } from '@/lib/action-toast'
 import { householdPath, noteDetailPath } from '@/lib/routes'
+import { FoundryNoteDetail, FoundryNotesIndex } from '@/osdk/FoundryNotes'
+import { usesFoundryData } from '@/osdk/household-route'
 import { usePrototype } from '@/prototype/PrototypeProvider'
 
 export function NotesIndexPage() {
   const { householdId = '' } = useParams()
+  if (usesFoundryData(householdId)) {
+    return <FoundryNotesIndex householdId={householdId} />
+  }
+  return <PrototypeNotesIndex householdId={householdId} />
+}
+
+function PrototypeNotesIndex({ householdId }: { householdId: string }) {
   const { notes } = usePrototype()
   const sorted = [...notes].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 
@@ -24,30 +34,23 @@ export function NotesIndexPage() {
       {sorted.length === 0 ? (
         <EmptyState>No notes yet.</EmptyState>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {sorted.map((note) => (
-            <li key={note.id}>
-              <Card className="gap-0 py-0 transition-colors hover:bg-accent/40">
-                <Link
-                  to={noteDetailPath(householdId, note.id)}
-                  className="flex min-h-16 items-center gap-3 px-4 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-pretty">{note.title}</p>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {note.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                </Link>
-              </Card>
-            </li>
-          ))}
-        </ul>
+        <CardGroup>
+          <RowList>
+            {sorted.map((note) => (
+              <LinkRow
+                key={note.id}
+                to={noteDetailPath(householdId, note.id)}
+                leading={<Tile icon={StickyNote} tone="notes" />}
+                title={note.title}
+                meta={note.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="rounded-full">
+                    {tag}
+                  </Badge>
+                ))}
+              />
+            ))}
+          </RowList>
+        </CardGroup>
       )}
     </div>
   )
@@ -55,6 +58,13 @@ export function NotesIndexPage() {
 
 export function NoteDetailPage() {
   const { noteId = '', householdId = '' } = useParams()
+  if (usesFoundryData(householdId)) {
+    return <FoundryNoteDetail householdId={householdId} noteId={noteId} />
+  }
+  return <PrototypeNoteDetail householdId={householdId} noteId={noteId} />
+}
+
+function PrototypeNoteDetail({ householdId, noteId }: { householdId: string; noteId: string }) {
   const { notes, saveNote } = usePrototype()
   const note = notes.find((item) => item.id === noteId)
   const [title, setTitle] = useState(note?.title ?? '')
@@ -89,17 +99,22 @@ export function NoteDetailPage() {
       />
 
       {blocker.state === 'blocked' ? (
-        <div className="mb-4 rounded-lg border bg-muted p-4 text-sm" role="alertdialog">
-          <p className="font-medium">You have unsaved changes.</p>
+        <div className="mb-5 rounded-2xl bg-card p-4 text-sm shadow-card" role="alertdialog">
+          <p className="font-semibold">You have unsaved changes.</p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <Button type="button" size="lg" className="h-11" onClick={() => blocker.proceed()}>
+            <Button
+              type="button"
+              size="lg"
+              className="h-11 rounded-full"
+              onClick={() => blocker.proceed()}
+            >
               Leave without saving
             </Button>
             <Button
               type="button"
               size="lg"
               variant="outline"
-              className="h-11"
+              className="h-11 rounded-full"
               onClick={() => blocker.reset()}
             >
               Stay here
@@ -108,33 +123,32 @@ export function NoteDetailPage() {
         </div>
       ) : null}
 
-      <div className="space-y-4">
+      <div className="rounded-2xl bg-card p-4 shadow-card">
         <div className="space-y-2">
           <Label htmlFor="note-title">Title</Label>
           <Input
             id="note-title"
-            className="h-11"
+            className="h-11 rounded-xl border-0 bg-secondary"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
         </div>
-        <div className="space-y-2">
+        <div className="mt-4 space-y-2">
           <Label htmlFor="note-body">Markdown</Label>
           <Textarea
             id="note-body"
-            className="min-h-64 font-mono"
+            className="min-h-64 rounded-xl border-0 bg-secondary font-mono"
             value={body}
             onChange={(event) => setBody(event.target.value)}
           />
         </div>
       </div>
 
-      {/* Save sits above the tab bar so it is thumb-reachable while the keyboard is open. */}
-      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] mt-4 border-t bg-background py-3 md:bottom-0">
+      <StickyActions>
         <Button
           type="button"
           size="lg"
-          className="h-11 w-full sm:w-auto"
+          className="h-11 w-full rounded-full"
           disabled={!dirty}
           onClick={() =>
             toastResult(saveNote({ id: note.id, title, markdownBody: body }), 'Note saved')
@@ -142,7 +156,7 @@ export function NoteDetailPage() {
         >
           {dirty ? 'Save changes' : 'Saved'}
         </Button>
-      </div>
+      </StickyActions>
     </div>
   )
 }

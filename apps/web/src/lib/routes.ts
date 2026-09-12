@@ -2,6 +2,18 @@ export function householdPath(householdId: string, section: string) {
   return `/${householdId}/${section}`
 }
 
+/** After a household is chosen: pick Jorby Home or Jorby Finance. */
+export function householdAppsPath(householdId: string) {
+  return `/${householdId}`
+}
+
+export function financePath(
+  householdId: string,
+  section: '' | 'activity' | 'budgets' | 'goals' | 'bills' = '',
+) {
+  return section === '' ? `/${householdId}/finance` : `/${householdId}/finance/${section}`
+}
+
 export function listDetailPath(householdId: string, listId: string) {
   return `/${householdId}/lists/${listId}`
 }

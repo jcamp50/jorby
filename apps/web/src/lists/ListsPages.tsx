@@ -1,20 +1,29 @@
-import { ChevronRight, Plus } from 'lucide-react'
+import { ListTodo, Pin, Plus } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { MemberMark } from '@/components/jorby/member-mark'
-import { EmptyState, BackLink, ScreenHeader } from '@/components/jorby/screen'
+import { useParams } from 'react-router-dom'
+import { CardGroup, LinkRow, RowList } from '@/components/jorby/card-group'
+import { MemberChip } from '@/components/jorby/member-mark'
+import { BackLink, EmptyState, ScreenHeader, StickyActions } from '@/components/jorby/screen'
 import { NotFoundState } from '@/components/jorby/states'
-import { toastResult } from '@/lib/action-toast'
-import { Badge } from '@/components/ui/badge'
+import { Tile } from '@/components/jorby/tile'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { toastResult } from '@/lib/action-toast'
 import { householdPath, listDetailPath } from '@/lib/routes'
+import { FoundryListDetail, FoundryListsIndex } from '@/osdk/FoundryLists'
+import { usesFoundryData } from '@/osdk/household-route'
 import { usePrototype } from '@/prototype/PrototypeProvider'
 
 export function ListsIndexPage() {
   const { householdId = '' } = useParams()
+  if (usesFoundryData(householdId)) {
+    return <FoundryListsIndex householdId={householdId} />
+  }
+  return <PrototypeListsIndex householdId={householdId} />
+}
+
+function PrototypeListsIndex({ householdId }: { householdId: string }) {
   const { lists, items } = usePrototype()
   const sorted = [...lists].sort((a, b) => Number(b.isPinned) - Number(a.isPinned))
 
@@ -24,34 +33,30 @@ export function ListsIndexPage() {
       {sorted.length === 0 ? (
         <EmptyState>No lists yet.</EmptyState>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {sorted.map((list) => {
-            const remaining = items.filter(
-              (item) => item.listId === list.id && !item.isComplete,
-            ).length
-            return (
-              <li key={list.id}>
-                <Card className="gap-0 py-0 transition-colors hover:bg-accent/40">
-                  <Link
-                    to={listDetailPath(householdId, list.id)}
-                    className="flex min-h-16 items-center gap-3 px-4 py-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="flex items-center gap-2 font-medium">
-                        <span className="truncate">{list.name}</span>
-                        {list.isPinned ? <Badge variant="secondary">Pinned</Badge> : null}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {remaining} open {remaining === 1 ? 'item' : 'items'}
-                      </p>
-                    </div>
-                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                  </Link>
-                </Card>
-              </li>
-            )
-          })}
-        </ul>
+        <CardGroup>
+          <RowList>
+            {sorted.map((list) => {
+              const remaining = items.filter(
+                (item) => item.listId === list.id && !item.isComplete,
+              ).length
+              return (
+                <LinkRow
+                  key={list.id}
+                  to={listDetailPath(householdId, list.id)}
+                  leading={<Tile icon={list.isPinned ? Pin : ListTodo} tone="lists" />}
+                  title={list.name}
+                  subtitle={list.description}
+                  trailing={
+                    <span className="text-sm font-semibold tabular-nums">
+                      {remaining}
+                      <span className="ml-1 font-normal text-muted-foreground">open</span>
+                    </span>
+                  }
+                />
+              )
+            })}
+          </RowList>
+        </CardGroup>
       )}
     </div>
   )
@@ -59,6 +64,13 @@ export function ListsIndexPage() {
 
 export function ListDetailPage() {
   const { listId = '', householdId = '' } = useParams()
+  if (usesFoundryData(householdId)) {
+    return <FoundryListDetail householdId={householdId} listId={listId} />
+  }
+  return <PrototypeListDetail householdId={householdId} listId={listId} />
+}
+
+function PrototypeListDetail({ householdId, listId }: { householdId: string; listId: string }) {
   const { lists, items, members, setItemComplete, addListItem } = usePrototype()
   const list = lists.find((item) => item.id === listId)
   const [draft, setDraft] = useState('')
@@ -68,6 +80,7 @@ export function ListDetailPage() {
   }
 
   const listItems = items.filter((item) => item.listId === list.id)
+  const open = listItems.filter((item) => !item.isComplete).length
 
   function onAdd(event: FormEvent) {
     event.preventDefault()
@@ -80,56 +93,65 @@ export function ListDetailPage() {
   return (
     <div>
       <BackLink to={householdPath(householdId, 'lists')} label="Lists" />
-      <ScreenHeader title={list.name} description={list.description} />
+      <ScreenHeader
+        title={list.name}
+        description={list.description}
+        action={
+          <span className="text-sm font-semibold tabular-nums text-muted-foreground">
+            {open}/{listItems.length}
+          </span>
+        }
+      />
 
-      <ul className="space-y-2">
-        {listItems.map((item) => {
-          const assignee = members.find((member) => member.id === item.assigneeMembershipId)
-          return (
-            <li key={item.id}>
-              <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-lg border bg-card px-4 py-3 transition-colors hover:bg-accent/40">
+      <CardGroup>
+        <RowList>
+          {listItems.map((item) => {
+            const assignee = members.find((member) => member.id === item.assigneeMembershipId)
+            return (
+              <label
+                key={item.id}
+                className="flex min-h-16 cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60"
+              >
                 <Checkbox
-                  className="size-5"
+                  className="size-6 rounded-lg"
                   checked={item.isComplete}
                   onCheckedChange={(checked) => setItemComplete(item.id, checked === true)}
                 />
                 <span
-                  className={`min-w-0 flex-1 text-pretty ${
+                  className={`min-w-0 flex-1 text-[0.9375rem] font-medium text-pretty ${
                     item.isComplete ? 'text-muted-foreground line-through' : ''
                   }`}
                 >
                   {item.text}
                 </span>
-                {assignee ? (
-                  <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
-                    <MemberMark member={assignee} />
-                    <span className="hidden sm:inline">{assignee.displayName}</span>
-                  </span>
-                ) : null}
+                {assignee ? <MemberChip member={assignee} /> : null}
               </label>
-            </li>
-          )
-        })}
-      </ul>
+            )
+          })}
+        </RowList>
+      </CardGroup>
 
-      {/* Sticky so the add field stays reachable on a phone without scrolling to the bottom. */}
-      <form
-        onSubmit={onAdd}
-        className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] mt-6 flex gap-2 border-t bg-background py-3 md:bottom-0"
-      >
-        <Input
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder="Add an item"
-          aria-label="New list item"
-          enterKeyHint="done"
-          className="h-11"
-        />
-        <Button type="submit" size="lg" className="h-11 shrink-0" disabled={draft.trim() === ''}>
-          <Plus aria-hidden />
-          Add
-        </Button>
-      </form>
+      <StickyActions>
+        <form onSubmit={onAdd} className="flex gap-2">
+          <Input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="Add an item"
+            aria-label="New list item"
+            enterKeyHint="done"
+            className="h-11 rounded-full border-0 bg-secondary"
+          />
+          <Button
+            type="submit"
+            size="lg"
+            className="h-11 shrink-0 rounded-full"
+            disabled={draft.trim() === ''}
+          >
+            <Plus aria-hidden />
+            Add
+          </Button>
+        </form>
+      </StickyActions>
     </div>
   )
 }
