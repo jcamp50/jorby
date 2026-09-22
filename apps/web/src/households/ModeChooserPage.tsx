@@ -14,40 +14,25 @@ export function ModeChooserPage() {
   if (usesFoundryData(householdId)) {
     return <FoundryModeChooser householdId={householdId} />
   }
-  return <ModeChooser householdId={householdId} name="Our Home" live={false} />
+  return <ModeChooser householdId={householdId} name="Our Home" />
 }
 
 function FoundryModeChooser({ householdId }: { householdId: string }) {
   const { object: household } = useOsdkObject(JorbyHousehold, householdId, Boolean(householdId))
   return (
-    <ModeChooser
-      householdId={householdId}
-      name={household?.displayName ?? 'Household'}
-      live
-    />
+    <ModeChooser householdId={householdId} name={household?.displayName ?? 'Household'} />
   )
 }
 
-function ModeChooser({
-  householdId,
-  name,
-  live,
-}: {
-  householdId: string
-  name: string
-  live: boolean
-}) {
+function ModeChooser({ householdId, name }: { householdId: string; name: string }) {
   return (
     <SignedOutShell>
       <p className="text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
         {name}
       </p>
-      <h1 className="mt-1 text-[1.75rem] font-extrabold tracking-[-0.02em] text-pretty">
+      <h1 className="mt-1 mb-6 text-[1.75rem] font-extrabold tracking-[-0.02em] text-pretty">
         What do you want to open?
       </h1>
-      <p className="mt-1.5 mb-6 text-sm text-muted-foreground text-pretty">
-        Same household. Two apps. Home is life. Finance is household money.
-      </p>
       <CardGroup>
         <RowList>
           <LinkRow
@@ -60,11 +45,7 @@ function ModeChooser({
             to={financePath(householdId)}
             leading={<Tile icon={Landmark} tone="finance" />}
             title="Jorby Finance"
-            subtitle={
-              live
-                ? 'Household money. Prototype only — no live ledger yet.'
-                : 'Accounts, cards, budgets, goals, bills'
-            }
+            subtitle="Accounts, cards, budgets, goals, bills"
           />
         </RowList>
       </CardGroup>

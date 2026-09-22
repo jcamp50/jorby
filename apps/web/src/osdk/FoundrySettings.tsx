@@ -27,10 +27,7 @@ export function FoundrySettings({ householdId }: { householdId: string }) {
 
   return (
     <div>
-      <ScreenHeader
-        title={household?.displayName ?? 'Household'}
-        description="Members come from Foundry. Invites still need the membership service."
-      />
+      <ScreenHeader title={household?.displayName ?? 'Household'} />
 
       <CardGroup label="Members">
         {isLoading && members.length === 0 ? (
@@ -55,7 +52,6 @@ export function FoundrySettings({ householdId }: { householdId: string }) {
         <Row
           leading={<Tile icon={Users} tone="home" variant="soft" />}
           title="Invite link"
-          subtitle="The confidential membership service will mint this. It is not in the consumer SDK."
           wrap
         />
       </CardGroup>

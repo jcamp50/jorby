@@ -1,0 +1,21 @@
+---
+description: Keep mock /our-home UI in sync with live Foundry household screens
+alwaysApply: true
+---
+
+# Mock and live catalog UI stay in sync
+
+`/our-home` is a local prototype. Every other household id is live Foundry. Users should not be able to tell them apart by layout, copy, or information architecture.
+
+When you change a live catalog screen (`apps/web/src/osdk/Foundry*.tsx`), make the same change on the matching mock screen in `apps/web/src/prototype` / `apps/web/src/{home,lists,notes,places,watch,things,search,households}`. Prefer a shared presentational component (see `apps/web/src/home/CatalogHome.tsx`) over two forked layouts.
+
+Do:
+
+- Share section order, headings, empty states, and button labels
+- Derive mock activity from the same `buildActivityFeed` helper as live Home
+- Keep Finance mock-only; do not invent Foundry money objects to “match”
+
+Do not:
+
+- Ship a Home/Search/Lists (etc.) layout that exists only on live or only on mock
+- Leave prototype or Foundry explainer copy inside screens (users already know which household they opened)

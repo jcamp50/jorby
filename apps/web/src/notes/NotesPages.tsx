@@ -2,6 +2,7 @@ import { StickyNote } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useBlocker, useParams } from 'react-router-dom'
 import { CardGroup, LinkRow, RowList } from '@/components/jorby/card-group'
+import { NoteCreate } from '@/components/jorby/create/forms'
 import { BackLink, EmptyState, ScreenHeader, StickyActions } from '@/components/jorby/screen'
 import { NotFoundState } from '@/components/jorby/states'
 import { Tile } from '@/components/jorby/tile'
@@ -9,8 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { toastResult } from '@/lib/action-toast'
+import { NoteContent } from '@/notes/NoteContent'
 import { householdPath, noteDetailPath } from '@/lib/routes'
 import { FoundryNoteDetail, FoundryNotesIndex } from '@/osdk/FoundryNotes'
 import { usesFoundryData } from '@/osdk/household-route'
@@ -25,12 +26,12 @@ export function NotesIndexPage() {
 }
 
 function PrototypeNotesIndex({ householdId }: { householdId: string }) {
-  const { notes } = usePrototype()
+  const { notes, createNote } = usePrototype()
   const sorted = [...notes].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 
   return (
     <div>
-      <ScreenHeader title="Notes" description="Markdown, tags, explicit save." />
+      <ScreenHeader title="Notes" />
       {sorted.length === 0 ? (
         <EmptyState>No notes yet.</EmptyState>
       ) : (
@@ -52,6 +53,11 @@ function PrototypeNotesIndex({ householdId }: { householdId: string }) {
           </RowList>
         </CardGroup>
       )}
+      <NoteCreate
+        onCreate={(input) =>
+          toastResult(createNote(input.title, { markdownBody: input.markdownBody, tags: input.tags }))
+        }
+      />
     </div>
   )
 }
@@ -93,10 +99,7 @@ function PrototypeNoteDetail({ householdId, noteId }: { householdId: string; not
   return (
     <div>
       <BackLink to={householdPath(householdId, 'notes')} label="Notes" />
-      <ScreenHeader
-        title="Edit note"
-        description="Prototype lock is not wired. Save is explicit so we don’t overwrite on navigate."
-      />
+      <ScreenHeader title="Viewing note" />
 
       {blocker.state === 'blocked' ? (
         <div className="mb-5 rounded-2xl bg-card p-4 text-sm shadow-card" role="alertdialog">
@@ -133,15 +136,7 @@ function PrototypeNoteDetail({ householdId, noteId }: { householdId: string; not
             onChange={(event) => setTitle(event.target.value)}
           />
         </div>
-        <div className="mt-4 space-y-2">
-          <Label htmlFor="note-body">Markdown</Label>
-          <Textarea
-            id="note-body"
-            className="min-h-64 rounded-xl border-0 bg-secondary font-mono"
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-          />
-        </div>
+        <NoteContent id="note-body" value={body} onChange={setBody} />
       </div>
 
       <StickyActions>

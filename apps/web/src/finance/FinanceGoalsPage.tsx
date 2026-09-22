@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom'
 import { Amount } from '@/components/jorby/amount'
 import { CardGroup } from '@/components/jorby/card-group'
 import { EmptyState, ScreenHeader } from '@/components/jorby/screen'
-import { FinanceViewBar, useFinanceView, viewLabel } from '@/finance/FinanceView'
+import { FinanceViewBar, useFinanceView } from '@/finance/FinanceView'
 import { LiveFinancePending } from '@/finance/LiveFinancePending'
 import { Meter } from '@/finance/meter'
 import { HOUSEHOLD_VIEW, ownedForView } from '@/finance/model'
@@ -25,10 +25,7 @@ function PrototypeFinanceGoals() {
 
   return (
     <div>
-      <ScreenHeader
-        title="Goals"
-        description={`${viewLabel(view, members)} saving goals.`}
-      />
+      <ScreenHeader title="Goals" />
       <FinanceViewBar />
       {goals.length === 0 ? (
         <EmptyState>No goals in this view.</EmptyState>

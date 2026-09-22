@@ -1,3 +1,4 @@
+import { Star } from 'lucide-react'
 import { MemberMark } from '@/components/jorby/member-mark'
 import { Rating } from '@/components/jorby/rating'
 import { CardGroup, RowList } from '@/components/jorby/card-group'
@@ -13,22 +14,36 @@ export function ReviewGroup({
   reviews,
   members,
   emptyMessage,
+  average,
+  note,
 }: {
   label?: string
   reviews: MemberReview[]
   members: Member[]
   emptyMessage: string
+  average?: number | null
+  note?: string
 }) {
+  const action =
+    average != null ? (
+      <span className="inline-flex items-center gap-1 text-sm font-semibold tabular-nums">
+        <Star className="size-3.5 fill-current" aria-hidden />
+        {average.toFixed(1)}
+        <span className="sr-only">average stars out of 5</span>
+      </span>
+    ) : undefined
+
   if (reviews.length === 0) {
     return (
-      <CardGroup label={label}>
+      <CardGroup label={label} action={action}>
         <EmptyState>{emptyMessage}</EmptyState>
       </CardGroup>
     )
   }
 
   return (
-    <CardGroup label={label}>
+    <CardGroup label={label} action={action}>
+      {note ? <p className="px-4 pt-3 text-sm text-muted-foreground text-pretty">{note}</p> : null}
       <RowList>
         {reviews.map((review) => {
           const member = members.find((item) => item.id === review.membershipId)

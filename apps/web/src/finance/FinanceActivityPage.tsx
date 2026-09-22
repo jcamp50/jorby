@@ -5,7 +5,7 @@ import { CardGroup, Row, RowList } from '@/components/jorby/card-group'
 import { MemberChip } from '@/components/jorby/member-mark'
 import { EmptyState, ScreenHeader } from '@/components/jorby/screen'
 import { Tile } from '@/components/jorby/tile'
-import { FinanceViewBar, useFinanceView, viewLabel } from '@/finance/FinanceView'
+import { FinanceViewBar, useFinanceView } from '@/finance/FinanceView'
 import { LiveFinancePending } from '@/finance/LiveFinancePending'
 import { shortDate } from '@/finance/format'
 import { transactionsForView } from '@/finance/model'
@@ -32,10 +32,7 @@ function PrototypeFinanceActivity() {
 
   return (
     <div>
-      <ScreenHeader
-        title="Spend"
-        description={`${viewLabel(view, members)} card and account activity.`}
-      />
+      <ScreenHeader title="Spend" />
       <FinanceViewBar />
       {rows.length === 0 ? (
         <EmptyState>No transactions in this view.</EmptyState>

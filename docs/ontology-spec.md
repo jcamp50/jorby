@@ -1,10 +1,12 @@
 # Jorby v1 ontology specification
 
 **Status:** Living technical specification  
-**Last updated:** 2026-09-05  
+**Last updated:** 2026-09-12
 **Ontology target:** Object Storage v2 with project-based permissions
 
-This document defines Jorby's logical Ontology. API names are provisional until the resources are created and generated OSDK documentation confirms them. Once published, avoid casually renaming active API names; update this specification and plan a migration first.
+This GitHub repository specifies the Ontology so the consumer UI stays aligned. Object types, Actions, Functions, and object security are implemented in Foundry, not in this git repository.
+
+This document defines Jorby's logical Ontology. Household, Lists, Notes, Places, Watch, and Things API names are confirmed against the live Ontology and `@jorby/sdk@0.14.0`. The package contains 15 objects, 31 links, 48 consumer Actions, 6 query Functions, and 3 interfaces with 13/5/3 concrete implementations; the Functions release is `0.6.0`. `getJorbyWatchTonight` is imported at `0.6.0`; `getMyMembership` and the four Places/Watch provider queries remain `0.5.0`. Function-backed edits receive the submitting user from trusted Action context and must not take `currentUserId` from the browser. Global polymorphic search through `JorbyContent` is enabled at the Ontology/SDK layer. This GitHub frontend queries that interface for Home recent activity and household search. Once published, avoid casually renaming active API names; update this specification and plan a migration first.
 
 ## 1. Modeling rules
 
@@ -19,11 +21,13 @@ This document defines Jorby's logical Ontology. API names are provisional until 
 
 ## 2. Ontology inventory
 
-### Interfaces
+### Interfaces (deployed)
 
-- `HouseholdScoped`
-- `JorbyContent`
-- `MemberReaction`
+- `JorbyHouseholdScoped` — 13 concrete implementations.
+- `JorbyContent` — 5 concrete implementations.
+- `JorbyMemberReaction` — 3 concrete implementations.
+
+All three interfaces and their concrete property/link mappings are generated in `@jorby/sdk@0.14.0`.
 
 ### Object types
 
@@ -38,38 +42,51 @@ This document defines Jorby's logical Ontology. API names are provisional until 
 
 Total: 16 concrete object types.
 
+### Deployed object types (current consumer SDK `0.14.0`)
+
+- Core: `JorbyHousehold`, `JorbyHouseholdMembership`.
+- Lists and Notes: `JorbySharedList`, `JorbyListItem`, `JorbySharedNote`.
+- Places: `JorbyCatalogPlace`, `JorbyPlaceEntry`, `JorbyVisit`, `JorbyDish`, `JorbyPlaceReview`, `JorbyDishReview`.
+- Watch: `JorbyMediaTitle`, `JorbyWatchEntry`, `JorbyWatchReaction`.
+- Things: `JorbyThing`.
+
+That is 15 deployed consumer objects. `HouseholdInvite` remains a planned/service-only logical type and is not in the browser SDK. See `implementation-status.md` for exact object type RIDs.
+
 ## 3. Reusable value types
 
 Create shared enumeration/value types where supported.
 
-| Value type            | Values or rule                                                                    |
-| --------------------- | --------------------------------------------------------------------------------- |
-| `HouseholdId`         | UUID string                                                                       |
-| `MembershipId`        | Deterministic string                                                              |
-| `FoundryUserId`       | Foundry user UUID                                                                 |
-| `AccessGroupId`       | Foundry group UUID                                                                |
-| `CurrencyCode`        | Uppercase ISO 4217 code                                                           |
-| `LocaleCode`          | BCP 47-style locale                                                               |
-| `TimezoneId`          | IANA timezone                                                                     |
-| `HouseholdStatus`     | `ACTIVE`, `ARCHIVED`                                                              |
-| `MembershipStatus`    | `ACTIVE`, `LEFT`, `REMOVED`                                                       |
-| `InviteStatus`        | `ACTIVE`, `CONSUMED`, `REVOKED`, `EXPIRED`                                        |
-| `VisitState`          | `WANT_TO_GO`, `BEEN`                                                              |
-| `ExternalProvider`    | Initially `GOOGLE`, `TMDB`; extensible                                            |
-| `MediaType`           | `MOVIE`, `SHOW`                                                                   |
-| `WatchStatus`         | `WATCHLIST`, `WATCHING`, `WATCHED`, `DROPPED`                                     |
-| `WatchReactionStage`  | `WANTS_TO_WATCH`, `REVIEWED`                                                      |
-| `ThingLifecycleState` | `IDEA`, `BUYING`, `BOUGHT`, `OWNED`, `BROKEN`, `UPGRADE_WANTED`, `GIFTED`, `SOLD` |
-| `RecipientKind`       | `MEMBER`, `HOUSEHOLD`, `EXTERNAL`                                                 |
-| `RatingHalfStars`     | Integer 1 through 10; UI displays value divided by 2                              |
+| Value type            | Values or rule                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------ |
+| `HouseholdId`         | UUID string                                                                          |
+| `MembershipId`        | Deterministic string                                                                 |
+| `FoundryUserId`       | Foundry user UUID                                                                    |
+| `AccessGroupId`       | Foundry group UUID                                                                   |
+| `CurrencyCode`        | Uppercase ISO 4217 code                                                              |
+| `LocaleCode`          | BCP 47-style locale                                                                  |
+| `TimezoneId`          | IANA timezone                                                                        |
+| `HouseholdStatus`     | `ACTIVE`, `ARCHIVED`                                                                 |
+| `MembershipStatus`    | `ACTIVE`, `LEFT`, `REMOVED`                                                          |
+| `InviteStatus`        | `ACTIVE`, `CONSUMED`, `REVOKED`, `EXPIRED`                                           |
+| `VisitState`          | `WANT_TO_GO`, `BEEN`                                                                 |
+| `ExternalProvider`    | Current adapter: `MOCK`; planned real providers include `GOOGLE`, `TMDB`; extensible |
+| `MediaType`           | `MOVIE`, `SHOW`                                                                      |
+| `WatchStatus`         | `WATCHLIST`, `WATCHING`, `WATCHED`, `DROPPED`                                        |
+| `WatchReactionStage`  | `WANTS_TO_WATCH`, `REVIEWED`                                                         |
+| `ThingLifecycleState` | `IDEA`, `BUYING`, `BOUGHT`, `OWNED`, `BROKEN`, `UPGRADE_WANTED`, `GIFTED`, `SOLD`    |
+| `RecipientKind`       | `MEMBER`, `HOUSEHOLD`, `EXTERNAL`                                                    |
+| `RatingHalfStars`     | Integer 1 through 10; UI displays value divided by 2                                 |
+| `PriceMinorUnits`     | Nonnegative Long containing exact minor currency units                               |
 
-Prefer integer half-star units over floating-point ratings so validation and equality are exact.
+Prefer integer half-star units over floating-point ratings so validation and equality are exact. Optional prices use `PriceMinorUnits` plus a `CurrencyCode`; Decimal is not used because the Ontology runs on Object Storage v2.
 
-## 4. Interfaces
+## 4. Interfaces — deployed contracts
 
-### 4.1 `HouseholdScoped`
+Interfaces are contracts over concrete object types, not storage types. The `Jorby` prefix matches the deployed object API-name convention. All three interfaces below and their concrete mappings are deployed in the Ontology and generated in `@jorby/sdk@0.14.0`. Application code may query them polymorphically while continuing to use concrete object types for domain-specific behavior.
 
-Implemented by every consumer-readable private type, including `Household`, but excluding service-only `HouseholdInvite` and public canonical provider types.
+### 4.1 `JorbyHouseholdScoped`
+
+Non-searchable. Implemented by 13 consumer-readable private types: `Household`, `HouseholdMembership`, `SharedList`, `ListItem`, `SharedNote`, `PlaceEntry`, `Visit`, `Dish`, `PlaceReview`, `DishReview`, `WatchEntry`, `WatchReaction`, and `Thing`. It excludes service-only `HouseholdInvite` and shared canonical provider types.
 
 | Property           |    Logical type | Required | Rule                                  |
 | ------------------ | --------------: | -------: | ------------------------------------- |
@@ -83,45 +100,35 @@ Implemented by every consumer-readable private type, including `Household`, but 
 | `archivedByUserId` | `FoundryUserId` |       No | Required when archived                |
 | `revision`         |         Integer |      Yes | Starts at 1 and increases on mutation |
 
-The interface creates a consistent application API; each concrete type still needs its own tested object security policy.
+The interface creates a consistent Functions and application contract; each concrete type still needs its own tested object security policy.
 
 ### 4.2 `JorbyContent`
 
-Implemented by `SharedList`, `SharedNote`, `PlaceEntry`, `WatchEntry`, and `Thing`.
+Searchable and paired with `JorbyHouseholdScoped` on its concrete types. Implemented by 5 types: `SharedList`, `SharedNote`, `PlaceEntry`, `WatchEntry`, and `Thing`.
 
-| Property       |  Logical type | Required | Purpose                      |
-| -------------- | ------------: | -------: | ---------------------------- |
-| `contentId`    |        String |      Yes | Maps to concrete primary key |
-| `householdId`  | `HouseholdId` |      Yes | Household filtering          |
-| `displayTitle` |        String |      Yes | Cross-section display        |
-| `searchText`   |        String |      Yes | Denormalized search document |
-| `updatedAt`    |     Timestamp |      Yes | Recent ordering              |
-| `archivedAt`   |     Timestamp |       No | Normal exclusion             |
+| Property       | Logical type | Required | Purpose                      |
+| -------------- | -----------: | -------: | ---------------------------- |
+| `contentId`    |       String |      Yes | Maps to concrete primary key |
+| `displayTitle` |       String |      Yes | Cross-section display        |
+| `searchText`   |       String |      Yes | Denormalized search document |
 
-Link constraints:
+Required link constraint: `household` points to exactly one `Household`.
 
-| Link API       | Target       | Cardinality | Required |
-| -------------- | ------------ | ----------: | -------: |
-| `household`    | `Household`  |         One |      Yes |
-| `relatedNotes` | `SharedNote` |        Many |       No |
+The initial interface does not define `relatedNotes`. Concrete many-to-many Note links remain authoritative until a supported polymorphic traversal is required. The frontend can query this interface for Home and global search, inspect the concrete object type, and route to the corresponding detail screen.
 
-`SharedNote` may leave `relatedNotes` unmapped.
+### 4.3 `JorbyMemberReaction`
 
-### 4.3 `MemberReaction`
-
-Implemented by `PlaceReview`, `DishReview`, and `WatchReaction`.
+Non-searchable and paired with `JorbyHouseholdScoped` on its concrete types. Implemented by 3 types: `PlaceReview`, `DishReview`, and `WatchReaction`.
 
 | Property          |   Logical type |    Required |
 | ----------------- | -------------: | ----------: |
 | `reactionId`      |         String |         Yes |
-| `householdId`     |  `HouseholdId` |         Yes |
 | `membershipId`    | `MembershipId` |         Yes |
 | `ratingHalfStars` |        Integer | Conditional |
 | `reviewText`      |         String |          No |
-| `updatedAt`       |      Timestamp |         Yes |
-| `archivedAt`      |      Timestamp |          No |
+| `reviewedAt`      |      Timestamp |          No |
 
-Required link constraint: `reviewer` points to exactly one `HouseholdMembership`.
+Required link constraint: `reviewer` points to exactly one `HouseholdMembership`. The concrete subject remains a typed link; no generic target-type/target-ID relationship is permitted. Actions enforce conditional rating and review rules.
 
 ## 5. Core object types
 
@@ -141,7 +148,7 @@ Primary key: `householdId`, random UUID.
 | `homeCountryCode`               |            String |       No | Two-letter country code     |
 | `accessGroupId`                 |   `AccessGroupId` |      Yes | Unique access group         |
 | `status`                        | `HouseholdStatus` |      Yes | Active or archived          |
-| shared audit/archive properties |                 — |        — | From `HouseholdScoped`      |
+| shared audit/archive properties |                 — |        — | From `JorbyHouseholdScoped` |
 
 Invariants:
 
@@ -308,17 +315,17 @@ Note links are many-to-many with Shared Lists, Place Entries, Watch Entries, and
 
 ## 8. Places
 
-### 8.1 `CatalogPlace`
+Planned API names use the `Jorby` prefix. Display names may remain Catalog place, Place entry, Visit, Dish, Place review, and Dish review.
 
-Canonical provider snapshot; not Household-private.
+### 8.1 `JorbyCatalogPlace`
+
+Canonical provider snapshot; shared and not Household-private.
 
 Primary key:
 
 ```text
-catalogPlaceId = "GOOGLE:" + providerPlaceId
+catalogPlaceId = primaryProvider + ":" + primaryProviderId
 ```
-
-The key remains an opaque stable internal identity even if a future provider becomes primary.
 
 | Property                 |               Type | Required |
 | ------------------------ | -----------------: | -------: |
@@ -328,8 +335,7 @@ The key remains an opaque stable internal identity even if a future provider bec
 | `externalKeys`           |       String array |      Yes |
 | `name`                   |             String |      Yes |
 | `formattedAddress`       |             String |       No |
-| `latitude`               |             Double |       No |
-| `longitude`              |             Double |       No |
+| `location`               |           GeoPoint |       No |
 | `mapUrl`                 |                URL |       No |
 | `websiteUrl`             |                URL |       No |
 | `phoneNumber`            |             String |       No |
@@ -350,25 +356,29 @@ Invariants:
 
 - One Catalog Place per external provider key.
 - Store curated provider fields, not raw response JSON.
-- Persist photo references/attribution, not secret-bearing URLs.
+- Persist photo references and attribution, not secret-bearing URLs.
 - Refresh is manual/on-demand.
 - Canonical refresh never overwrites Household state.
+- Manual Places never create shared canonical records.
 
-### 8.2 `PlaceEntry`
+### 8.2 `JorbyPlaceEntry`
 
-Primary key:
-
-```text
-placeEntryId = householdId + ":" + catalogPlaceId
-```
+Primary key: `placeEntryId`, random UUID for both manual and provider-backed entries.
 
 | Property                        |            Type | Required |
 | ------------------------------- | --------------: | -------: |
-| `placeEntryId`                  |          String |      Yes |
+| `placeEntryId`                  |     UUID string |      Yes |
 | `householdId`                   |   `HouseholdId` |      Yes |
 | `accessGroupId`                 | `AccessGroupId` |      Yes |
-| `catalogPlaceId`                |          String |      Yes |
+| `catalogPlaceId`                |          String |       No |
 | `displayTitle`                  |          String |      Yes |
+| `isDisplayTitleOverridden`      |         Boolean |      Yes |
+| `manualFormattedAddress`        |          String |       No |
+| `manualLocation`                |        GeoPoint |       No |
+| `manualWebsiteUrl`              |             URL |       No |
+| `manualPhoneNumber`             |          String |       No |
+| `manualTypes`                   |    String array |      Yes |
+| `manualCuisineTags`             |    String array |      Yes |
 | `visitState`                    |    `VisitState` |      Yes |
 | `isFavorite`                    |         Boolean |      Yes |
 | `sharedNote`                    |          String |       No |
@@ -377,14 +387,19 @@ placeEntryId = householdId + ":" + catalogPlaceId
 
 Invariants:
 
-- One Place Entry per Household/Catalog Place.
-- Re-adding an archived Place restores the same entry.
+- A null `catalogPlaceId` identifies a manual, private Entry.
+- Only one active Entry in a Household may reference a given Catalog Place.
+- Manual creation requires only a nonblank display title.
+- Reconciliation sets the optional canonical key without replacing the Entry ID or history.
+- Reconciliation rejects an already-linked canonical duplicate; v1 does not merge histories.
+- A correction may replace an incorrect canonical link only when no duplicate results.
+- Provider refresh preserves title overrides and all manual fields.
+- Re-adding a provider Place restores the existing archived Entry where one exists.
 - Favorite requires `BEEN`.
-- An active Visit forces `BEEN`.
-- A Place with an active Visit cannot return to `WANT_TO_GO`.
-- First Visit automatically changes state to `BEEN`.
+- An active Visit forces `BEEN` and prevents return to `WANT_TO_GO`.
+- A Place Review requires `BEEN`; a Visit record is not required.
 
-### 8.3 `Visit`
+### 8.3 `JorbyVisit`
 
 Primary key: `visitId`, random UUID.
 
@@ -402,13 +417,12 @@ Many-to-many links: `participants` to Membership and `dishes` to Dish.
 
 Invariants:
 
-- At least one participant.
-- Participants belong to the Visit Household.
+- At least one same-Household participant.
 - Current member is selected by default in the UI.
 - Linked Dishes belong to the same Place Entry.
-- Visit changes refresh the parent entry.
+- Visit changes refresh the parent Entry.
 
-### 8.4 `Dish`
+### 8.4 `JorbyDish`
 
 Primary key: `dishId`, random UUID.
 
@@ -425,7 +439,7 @@ Primary key: `dishId`, random UUID.
 
 No two active Dishes under one Place Entry may have the same normalized name.
 
-### 8.5 `PlaceReview`
+### 8.5 `JorbyPlaceReview`
 
 Primary key:
 
@@ -445,7 +459,7 @@ placeReviewId = placeEntryId + ":" + membershipId
 | `reviewedAt`                    |       Timestamp |      Yes |
 | shared audit/archive properties |               — |        — |
 
-### 8.6 `DishReview`
+### 8.6 `JorbyDishReview`
 
 Same shape as Place Review, replacing `placeEntryId` with `dishId`.
 
@@ -469,14 +483,16 @@ The default “we disagree” threshold is a spread of at least 3 half-star unit
 
 ## 9. Watch
 
-### 9.1 `MediaTitle`
+Planned API names use the `Jorby` prefix.
 
-Canonical TMDB snapshot.
+### 9.1 `JorbyMediaTitle`
+
+Canonical provider snapshot; shared and not Household-private.
 
 Primary key:
 
 ```text
-mediaTitleId = "TMDB:" + mediaType + ":" + tmdbId
+mediaTitleId = primaryProvider + ":" + mediaType + ":" + primaryProviderId
 ```
 
 | Property            |               Type | Required |
@@ -500,23 +516,24 @@ mediaTitleId = "TMDB:" + mediaType + ":" + tmdbId
 | `lastRefreshedAt`   |          Timestamp |      Yes |
 | `revision`          |            Integer |      Yes |
 
-Movie rows have null season and episode counts. Store image paths rather than secret-bearing URLs.
+Movie rows have null season and episode counts. Store image paths rather than secret-bearing URLs. Manual titles never create shared Media Title objects.
 
-### 9.2 `WatchEntry`
+### 9.2 `JorbyWatchEntry`
 
-Primary key:
-
-```text
-watchEntryId = householdId + ":" + mediaTitleId
-```
+Primary key: `watchEntryId`, random UUID for both manual and provider-backed entries.
 
 | Property                        |            Type | Required |
 | ------------------------------- | --------------: | -------: |
-| `watchEntryId`                  |          String |      Yes |
+| `watchEntryId`                  |     UUID string |      Yes |
 | `householdId`                   |   `HouseholdId` |      Yes |
 | `accessGroupId`                 | `AccessGroupId` |      Yes |
-| `mediaTitleId`                  |          String |      Yes |
+| `mediaTitleId`                  |          String |       No |
 | `displayTitle`                  |          String |      Yes |
+| `isDisplayTitleOverridden`      |         Boolean |      Yes |
+| `mediaType`                     |     `MediaType` |      Yes |
+| `manualReleaseYear`             |         Integer |       No |
+| `manualOverview`                |          String |       No |
+| `manualImageUrl`                |             URL |       No |
 | `status`                        |   `WatchStatus` |      Yes |
 | `lastWatchedSeasonNumber`       |         Integer |       No |
 | `lastWatchedEpisodeNumber`      |         Integer |       No |
@@ -528,15 +545,21 @@ Progress means the last completed episode.
 
 Invariants:
 
+- A null `mediaTitleId` identifies a manual, private Entry.
+- Manual creation requires a nonblank title and media type.
+- Only one active Entry in a Household may reference a given Media Title.
+- Reconciliation preserves the Entry ID, progress, reactions, links, and history.
+- Duplicate canonical reconciliation is rejected rather than merged in v1.
+- Provider refresh preserves title overrides and manual fields.
 - Movies have null episode progress.
-- Episode requires a season.
-- Progress values are positive and do not exceed known provider bounds.
-- One Watch Entry per Household/Media Title.
-- Re-adding an archived title restores it.
+- Show progress requires positive season and episode values; episode requires season.
+- Season cannot exceed a known canonical season count.
+- Per-season episode bounds are not enforced because v1 has no Episode objects.
+- Re-adding an archived provider title restores its existing Entry.
 - `WATCHED` may archive outstanding interest-only reactions but preserves Reviews.
 - `DROPPED` retains progress.
 
-### 9.3 `WatchReaction`
+### 9.3 `JorbyWatchReaction`
 
 Primary key:
 
@@ -554,22 +577,25 @@ watchReactionId = watchEntryId + ":" + membershipId
 | `stage`                         | `WatchReactionStage` |         Yes |
 | `ratingHalfStars`               |              Integer | Conditional |
 | `reviewText`                    |               String |          No |
-| `reviewedAt`                    |            Timestamp |       No |
+| `reviewedAt`                    |            Timestamp |          No |
 | shared audit/archive properties |                    — |           — |
 
 Invariants:
 
-- `WANTS_TO_WATCH` has no rating/review.
+- `WANTS_TO_WATCH` has no rating or review.
 - `REVIEWED` requires rating and reviewed timestamp.
+- A rated Review is allowed only while the Entry is `WATCHED` or `DROPPED`.
 - Review submission transitions the same reaction object.
 - Only the owning member modifies their reaction.
-- Everyone-wants is true when active interest reactions equal active Membership count.
+- Everyone-wants is computed server-side when active wants reactions equal active Membership count; missing reactions are never positive.
 
 ## 10. Things
 
-### 10.1 `Thing`
+### 10.1 `JorbyThing`
 
 Primary key: `thingId`, random UUID.
+
+One Thing represents one physical or intended unit. Identical units are separate Thing objects; v1 has no quantity property.
 
 | Property                        |                  Type | Required | Notes                |
 | ------------------------------- | --------------------: | -------: | -------------------- |
@@ -579,8 +605,8 @@ Primary key: `thingId`, random UUID.
 | `name`                          |                String |      Yes | Display title        |
 | `lifecycleState`                | `ThingLifecycleState` |      Yes | Drives lens          |
 | `productUrl`                    |                   URL |       No | —                    |
-| `priceAmount`                   |               Decimal |       No | Nonnegative          |
-| `priceCurrency`                 |        `CurrencyCode` |       No | Snapshot             |
+| `priceMinorUnits`               |                  Long |       No | Exact, nonnegative   |
+| `priceCurrency`                 |        `CurrencyCode` |       No | Required with price  |
 | `recipientKind`                 |       `RecipientKind` |       No | —                    |
 | `recipientMembershipId`         |        `MembershipId` |       No | Conditional          |
 | `externalRecipientLabel`        |                String |       No | Conditional          |
@@ -625,7 +651,9 @@ Additional invariants:
 - Member recipient requires Membership and no external label.
 - External recipient requires label and no Membership.
 - Household recipient requires neither.
-- Price currency is initialized from Household and then preserved.
+- Price is optional; `priceMinorUnits` and `priceCurrency` are both absent or both present.
+- Minor units are a nonnegative exact integer. TypeScript v2 uses its Long string representation and `BigInt` for arithmetic.
+- Price currency is initialized from Household when first entered and then preserved as a snapshot; a later edit replaces the current price.
 - Warranty expiry cannot precede purchase date.
 
 ## 11. Link types
@@ -646,7 +674,7 @@ All links are bidirectional. Names below are the intended OSDK-side API names.
 | `SharedNote`          | `relatedPlaces`       | `PlaceEntry`          | `relatedNotes`      | Many-to-many     |
 | `SharedNote`          | `relatedWatchEntries` | `WatchEntry`          | `relatedNotes`      | Many-to-many     |
 | `SharedNote`          | `relatedThings`       | `Thing`               | `relatedNotes`      | Many-to-many     |
-| `PlaceEntry`          | `catalogPlace`        | `CatalogPlace`        | `householdEntries`  | Many-to-one      |
+| `PlaceEntry`          | `catalogPlace`        | `CatalogPlace`        | `householdEntries`  | Many-to-zero/one |
 | `Visit`               | `placeEntry`          | `PlaceEntry`          | `visits`            | Many-to-one      |
 | `Dish`                | `placeEntry`          | `PlaceEntry`          | `dishes`            | Many-to-one      |
 | `PlaceReview`         | `placeEntry`          | `PlaceEntry`          | `reviews`           | Many-to-one      |
@@ -655,7 +683,7 @@ All links are bidirectional. Names below are the intended OSDK-side API names.
 | `DishReview`          | `dish`                | `Dish`                | `reviews`           | Many-to-one      |
 | `PlaceReview`         | `reviewer`            | `HouseholdMembership` | `placeReviews`      | Many-to-one      |
 | `DishReview`          | `reviewer`            | `HouseholdMembership` | `dishReviews`       | Many-to-one      |
-| `WatchEntry`          | `mediaTitle`          | `MediaTitle`          | `householdEntries`  | Many-to-one      |
+| `WatchEntry`          | `mediaTitle`          | `MediaTitle`          | `householdEntries`  | Many-to-zero/one |
 | `WatchReaction`       | `watchEntry`          | `WatchEntry`          | `reactions`         | Many-to-one      |
 | `WatchReaction`       | `reviewer`            | `HouseholdMembership` | `watchReactions`    | Many-to-one      |
 | `Thing`               | `assignee`            | `HouseholdMembership` | `assignedThings`    | Many-to-zero/one |
@@ -752,6 +780,8 @@ This enables Home recency and global search without an Activity object.
 
 ## 17. Derived views, not object types
 
+The concrete per-section views and `JorbyContent`-backed polymorphic query formulations are supported by the deployed Ontology/SDK. `Recent` and global `We should`/search remain frontend work; do not present a global-search UI as implemented until it is built and validated.
+
 | View             | Query definition                                                       |
 | ---------------- | ---------------------------------------------------------------------- |
 | Recent           | Active `JorbyContent` ordered by `updatedAt DESC`                      |
@@ -769,24 +799,43 @@ This enables Home recency and global search without an Activity object.
 
 ## 18. OSDK import boundary
 
-Import into the consumer application SDK:
+### Current consumer SDK (`@jorby/sdk@0.14.0`)
 
-- `Household`
-- `HouseholdMembership`
-- all five top-level content types
-- child types required by screens
-- `CatalogPlace` and `MediaTitle`
-- the three interfaces
-- approved consumer Actions
-- provider search/detail Functions
+The deployed Developer Console scope and generated package contain:
 
-Do not import:
+- 15 concrete object types spanning Household, Lists, Notes, Places, Watch, and Things.
+- 31 typed links exposed through those generated object definitions.
+- 48 consumer Actions.
+- 6 query Functions: `getJorbyWatchTonight` at `0.6.0`; `getMyMembership`, `searchJorbyPlaces`, `getJorbyPlaceDetails`, `searchJorbyMediaTitles`, and `getJorbyMediaTitleDetails` at `0.5.0`.
+- 3 interfaces with 13/5/3 concrete implementations: `JorbyHouseholdScoped`, `JorbyContent`, and `JorbyMemberReaction`.
+- 72 exact resource exports across `$Objects`, `$Actions`, `$Queries`, and `$Interfaces`.
 
-- `HouseholdInvite`
-- administrative purge Actions
-- trusted membership-service-only Functions
-- unrestricted edit resources
-- secret/source resources
+The `Jorby Functions` release is `0.6.0`. Function-backed Actions take the submitting user from trusted Action context; do not send `currentUserId` from the browser. The runtime remains pinned exactly to `@osdk/react@2.67.0`, `@osdk/client@2.67.0`, `@osdk/api@2.67.0`, and `@osdk/oauth@1.13.0`.
+
+### Deployed concrete additions
+
+- Places: `JorbyCatalogPlace`, `JorbyPlaceEntry`, `JorbyVisit`, `JorbyDish`, `JorbyPlaceReview`, and `JorbyDishReview`, with concrete links, governed Actions, and provider-neutral search/detail queries.
+- Watch: `JorbyMediaTitle`, `JorbyWatchEntry`, and `JorbyWatchReaction`, with concrete links, governed Actions, provider-neutral queries, and the smart-queue query.
+- Things: `JorbyThing`, with its Household/Membership/Note links and governed composite Actions.
+
+The provider-neutral query adapters are deterministic `MOCK` only. Real provider credentials and Foundry egress remain pending. Canonical Catalog Place and Media Title objects are consumer-readable but contain no Household state; edits remain reachable only through governed Actions.
+
+### Deployed interface layer
+
+`JorbyHouseholdScoped`, `JorbyContent`, and `JorbyMemberReaction` are deployed and generated with 13/5/3 concrete implementations. `JorbyContent` enables global polymorphic search at the Ontology/SDK layer. The React global-search UI remains unimplemented.
+
+### Action-cap migration
+
+Six legacy List Action RIDs were repurposed into composite Places/Watch/Things Actions to stay within the enrollment's 60-Action cap. The removed symbols are `archiveJorbySharedList`, `completeJorbyListItem`, `reopenJorbyListItem`, `restoreJorbySharedList`, `updateJorbyListItem`, and `updateJorbySharedList`. They must not appear in current application imports. See `implementation-status.md` for the exact current resource/RID tables.
+
+### Do not import
+
+- `HouseholdInvite`.
+- `provisionJorbyHousehold`.
+- Administrative purge Actions.
+- Trusted membership-service-only Functions.
+- Unrestricted edit resources.
+- Provider secret or source resources.
 
 ## 19. Required pre-build validation
 

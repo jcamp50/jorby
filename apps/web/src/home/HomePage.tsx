@@ -1,31 +1,32 @@
-import { ArrowRight, Clapperboard, ListTodo, MapPin, Package, Star, StickyNote } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
-import { Stat } from '@/components/jorby/amount'
-import { CardGroup, LinkRow, RowList } from '@/components/jorby/card-group'
-import { MemberChip } from '@/components/jorby/member-mark'
-import { Rating } from '@/components/jorby/rating'
+import { Clapperboard, ListTodo, MapPin, Package, StickyNote } from 'lucide-react'
+import { useMemo } from 'react'
+import { useParams } from 'react-router-dom'
+import { CatalogHome } from '@/home/CatalogHome'
 import {
-  EmptyState,
-  GroupLink,
-  HeroAction,
-  HeroCard,
-  ScreenHeader,
-} from '@/components/jorby/screen'
-import { SnapshotCard, SnapshotRow } from '@/components/jorby/snapshot-row'
-import { Tile } from '@/components/jorby/tile'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+  buildActivityFeed,
+  toMillis,
+  type ActivityChild,
+  type ActivityParent,
+} from '@/lib/activity'
 import {
-  listDetailPath,
+  householdPath,
   placeDetailPath,
   thingDetailPath,
   watchDetailPath,
-  householdPath,
+  listDetailPath,
+  noteDetailPath,
 } from '@/lib/routes'
 import { FoundryHome } from '@/osdk/FoundryHome'
 import { usesFoundryData } from '@/osdk/household-route'
-import { reviewSpread } from '@/prototype/model'
 import { usePrototype } from '@/prototype/PrototypeProvider'
+
+const activityPath = {
+  lists: listDetailPath,
+  notes: noteDetailPath,
+  places: placeDetailPath,
+  watch: watchDetailPath,
+  things: thingDetailPath,
+} as const
 
 export function HomePage() {
   const { householdId = '' } = useParams()
@@ -37,211 +38,206 @@ export function HomePage() {
 
 function PrototypeHome({ householdId }: { householdId: string }) {
   const {
-    unfinishedLists,
+    lists,
+    items,
+    notes,
+    places,
+    placeReviews,
+    visits,
+    watch,
+    things,
+    members,
+    currentMembershipId,
     weShouldPlaces,
     watchTonight,
     wishThings,
-    placeReviews,
-    places,
-    members,
   } = usePrototype()
 
-  const disagreements = Object.entries(placeReviews).filter(
-    ([, reviews]) => (reviewSpread(reviews) ?? 0) >= 3,
-  )
-
-  // The smart union that makes Jorby different from a generic tracker, so it
-  // gets the one saturated card on the screen.
-  const weShould = [
-    ...weShouldPlaces.map((place) => ({
-      key: place.id,
-      to: placeDetailPath(householdId, place.id),
-      tone: 'places' as const,
-      icon: MapPin,
-      title: place.name,
-      subtitle: `${place.cuisine} · ${place.neighborhood}`,
-      tag: 'Want to go',
-    })),
-    ...watchTonight.map((entry) => ({
-      key: entry.id,
-      to: watchDetailPath(householdId, entry.id),
-      tone: 'watch' as const,
-      icon: Clapperboard,
-      title: entry.title,
-      subtitle: String(entry.year),
-      tag: 'Both want it',
-    })),
-    ...wishThings.map((thing) => ({
-      key: thing.id,
-      to: thingDetailPath(householdId, thing.id),
-      tone: 'things' as const,
-      icon: Package,
-      title: thing.name,
-      subtitle: thing.recipientLabel ? `For ${thing.recipientLabel}` : undefined,
-      tag: 'Wish',
-    })),
-  ]
+  const activity = useMemo(() => {
+    const names = new Map(members.map((member) => [member.id, member.displayName]))
+    const parents: ActivityParent[] = [
+      ...lists.map((list) => ({
+        id: list.id,
+        kind: 'lists' as const,
+        title: list.name,
+        createdAt: toMillis(list.createdAt),
+        updatedAt: toMillis(list.updatedAt),
+        createdById: list.createdByMembershipId,
+        updatedById: list.updatedByMembershipId,
+      })),
+      ...notes.map((note) => ({
+        id: note.id,
+        kind: 'notes' as const,
+        title: note.title,
+        createdAt: toMillis(note.createdAt),
+        updatedAt: toMillis(note.updatedAt),
+        createdById: note.createdByMembershipId,
+        updatedById: note.updatedByMembershipId,
+      })),
+      ...places.map((place) => ({
+        id: place.id,
+        kind: 'places' as const,
+        title: place.name,
+        createdAt: toMillis(place.createdAt),
+        updatedAt: toMillis(place.updatedAt),
+        createdById: place.createdByMembershipId,
+        updatedById: place.updatedByMembershipId,
+        visitState: place.visitState,
+      })),
+      ...watch.map((entry) => ({
+        id: entry.id,
+        kind: 'watch' as const,
+        title: entry.title,
+        createdAt: toMillis(entry.createdAt),
+        updatedAt: toMillis(entry.updatedAt),
+        createdById: entry.createdByMembershipId,
+        updatedById: entry.updatedByMembershipId,
+        watchStatus: entry.status,
+      })),
+      ...things.map((thing) => ({
+        id: thing.id,
+        kind: 'things' as const,
+        title: thing.name,
+        createdAt: toMillis(thing.createdAt),
+        updatedAt: toMillis(thing.updatedAt),
+        createdById: thing.createdByMembershipId,
+        updatedById: thing.updatedByMembershipId,
+        lifecycleState: thing.lifecycleState,
+      })),
+    ]
+    const children: ActivityChild[] = [
+      ...visits.map((visit) => ({
+        id: visit.id,
+        parentId: visit.placeId,
+        kind: 'visit' as const,
+        at: toMillis(visit.createdAt),
+        actorId: visit.createdByMembershipId,
+      })),
+      ...Object.entries(placeReviews).flatMap(([placeId, reviews]) =>
+        reviews.map((review, index) => ({
+          id: `${placeId}:${review.membershipId}:${index}`,
+          parentId: placeId,
+          kind: 'review' as const,
+          at: toMillis(review.reviewedAt),
+          actorId: review.membershipId,
+        })),
+      ),
+      ...watch.flatMap((entry) => [
+        ...(entry.status === 'WATCHLIST'
+          ? entry.wantsMembershipIds.map((membershipId) => ({
+              id: `want:${entry.id}:${membershipId}`,
+              parentId: entry.id,
+              kind: 'want' as const,
+              at: toMillis(entry.updatedAt),
+              actorId: membershipId,
+            }))
+          : []),
+        ...entry.reviews.map((review, index) => ({
+          id: `watch-review:${entry.id}:${review.membershipId}:${index}`,
+          parentId: entry.id,
+          kind: 'review' as const,
+          at: toMillis(review.reviewedAt),
+          actorId: review.membershipId,
+        })),
+      ]),
+    ]
+    return buildActivityFeed({
+      parents,
+      listItems: items.map((item) => ({
+        id: item.id,
+        listId: item.listId,
+        text: item.text,
+        createdAt: toMillis(item.createdAt),
+        createdById: item.createdByMembershipId,
+      })),
+      children,
+      actorName: (id) => names.get(id) ?? '',
+    }).map((event) => ({
+      ...event,
+      to: activityPath[event.kind](householdId, event.parentId),
+      member: members.find((member) => member.id === event.actorId),
+    }))
+  }, [
+    householdId,
+    items,
+    lists,
+    members,
+    notes,
+    placeReviews,
+    places,
+    things,
+    visits,
+    watch,
+  ])
 
   return (
-    <div>
-      <ScreenHeader title="Home" description="What we should do, and what’s still open." />
-
-      <SnapshotRow label="Around the house">
-        <SnapshotCard
-          to={householdPath(householdId, 'lists')}
-          icon={ListTodo}
-          tone="lists"
-          title="Lists"
-          value={String(unfinishedLists.length)}
-          hint="open"
-        />
-        <SnapshotCard
-          to={householdPath(householdId, 'notes')}
-          icon={StickyNote}
-          tone="notes"
-          title="Notes"
-          value="Mock"
-          hint="local only"
-        />
-        <SnapshotCard
-          to={householdPath(householdId, 'places')}
-          icon={MapPin}
-          tone="places"
-          title="Places"
-          value={String(weShouldPlaces.length)}
-          hint="queued"
-        />
-        <SnapshotCard
-          to={householdPath(householdId, 'watch')}
-          icon={Clapperboard}
-          tone="watch"
-          title="Watch"
-          value={String(watchTonight.length)}
-          hint="both want"
-        />
-        <SnapshotCard
-          to={householdPath(householdId, 'things')}
-          icon={Package}
-          tone="things"
-          title="Things"
-          value={String(wishThings.length)}
-          hint="wishes"
-        />
-      </SnapshotRow>
-
-      <HeroCard eyebrow="We should">
-        {weShould.length === 0 ? (
-          <p className="text-lg font-semibold text-pretty">
-            Nothing queued up. Add a place or a title you both want.
-          </p>
-        ) : (
-          <>
-            <Stat value={weShould.length} unit={weShould.length === 1 ? 'idea' : 'ideas'} />
-            <p className="mt-1.5 mb-4 text-[0.9375rem] font-medium text-white/85 text-pretty">
-              we both said yes to. Start with {weShould[0].title}.
-            </p>
-            <HeroAction to={weShould[0].to}>
-              Open {weShould[0].title}
-              <ArrowRight className="size-4" aria-hidden />
-            </HeroAction>
-          </>
-        )}
-      </HeroCard>
-
-      <div className="mb-5 flex flex-wrap justify-center gap-2">
-        <Button asChild variant="secondary" className="h-11 rounded-full px-5">
-          <Link to={householdPath(householdId, 'search')}>Search</Link>
-        </Button>
-        <Button asChild className="h-11 rounded-full px-5">
-          <Link to={householdPath(householdId, 'lists')}>Open lists</Link>
-        </Button>
-      </div>
-
-      {weShould.length > 0 ? (
-        <CardGroup label="What’s queued">
-          <RowList>
-            {weShould.map((item) => (
-              <LinkRow
-                key={item.key}
-                to={item.to}
-                leading={<Tile icon={item.icon} tone={item.tone} />}
-                title={item.title}
-                subtitle={item.subtitle}
-                meta={
-                  <Badge variant="secondary" className="rounded-full">
-                    {item.tag}
-                  </Badge>
-                }
-              />
-            ))}
-          </RowList>
-        </CardGroup>
-      ) : null}
-
-      <CardGroup label="Open lists">
-        {unfinishedLists.length === 0 ? (
-          <EmptyState>Every list is finished.</EmptyState>
-        ) : (
-          <RowList>
-            {unfinishedLists.map(({ list, remaining }) => (
-              <LinkRow
-                key={list.id}
-                to={listDetailPath(householdId, list.id)}
-                leading={<Tile icon={ListTodo} tone="lists" />}
-                title={list.name}
-                subtitle={list.isPinned ? 'Pinned' : undefined}
-                trailing={
-                  <span className="text-sm font-semibold tabular-nums">
-                    {remaining}
-                    <span className="ml-1 font-normal text-muted-foreground">open</span>
-                  </span>
-                }
-              />
-            ))}
-          </RowList>
-        )}
-      </CardGroup>
-
-      <CardGroup
-        label="We disagree"
-        action={<GroupLink to={householdPath(householdId, 'places')}>All places</GroupLink>}
-      >
-        {disagreements.length === 0 ? (
-          <EmptyState>No big rating gaps right now.</EmptyState>
-        ) : (
-          <RowList>
-            {disagreements.map(([placeId, reviews]) => {
-              const spread = reviewSpread(reviews) ?? 0
-              const place = places.find((entry) => entry.id === placeId)
-              return (
-                <LinkRow
-                  key={placeId}
-                  to={placeDetailPath(householdId, placeId)}
-                  leading={<Tile icon={Star} tone="places" variant="soft" />}
-                  title={place?.name ?? 'Place'}
-                  subtitle={`${spread / 2} stars apart`}
-                  meta={reviews.map((review) => {
-                    const member = members.find((item) => item.id === review.membershipId)
-                    if (!member) {
-                      return null
-                    }
-                    return (
-                      <span key={review.membershipId} className="inline-flex items-center gap-1">
-                        <MemberChip member={member} />
-                        <Rating halfStars={review.ratingHalfStars} />
-                      </span>
-                    )
-                  })}
-                />
-              )
-            })}
-          </RowList>
-        )}
-      </CardGroup>
-
-      <p className="px-1 text-xs text-muted-foreground">
-        Mock household only. Data resets on reload.
-      </p>
-    </div>
+    <CatalogHome
+      title="Our Home"
+      activity={activity}
+      youActorIds={currentMembershipId ? [currentMembershipId] : []}
+      snapshots={[
+        {
+          to: householdPath(householdId, 'lists'),
+          icon: ListTodo,
+          tone: 'lists',
+          title: 'Lists',
+          value: String(lists.length),
+        },
+        {
+          to: householdPath(householdId, 'notes'),
+          icon: StickyNote,
+          tone: 'notes',
+          title: 'Notes',
+          value: String(notes.length),
+        },
+        {
+          to: householdPath(householdId, 'places'),
+          icon: MapPin,
+          tone: 'places',
+          title: 'Places',
+          value: String(places.length),
+        },
+        {
+          to: householdPath(householdId, 'watch'),
+          icon: Clapperboard,
+          tone: 'watch',
+          title: 'Watch',
+          value: String(watch.length),
+        },
+        {
+          to: householdPath(householdId, 'things'),
+          icon: Package,
+          tone: 'things',
+          title: 'Things',
+          value: String(things.length),
+        },
+      ]}
+      queued={[
+        ...weShouldPlaces.slice(0, 3).map((place) => ({
+          key: place.id,
+          to: placeDetailPath(householdId, place.id),
+          tone: 'places' as const,
+          icon: MapPin,
+          title: place.name,
+          tag: 'Want to go',
+        })),
+        ...watchTonight.slice(0, 3).map((entry) => ({
+          key: entry.id,
+          to: watchDetailPath(householdId, entry.id),
+          tone: 'watch' as const,
+          icon: Clapperboard,
+          title: entry.title,
+          tag: 'Watchlist',
+        })),
+        ...wishThings.slice(0, 3).map((thing) => ({
+          key: thing.id,
+          to: thingDetailPath(householdId, thing.id),
+          tone: 'things' as const,
+          icon: Package,
+          title: thing.name,
+          tag: 'Wish',
+        })),
+      ]}
+    />
   )
 }

@@ -34,10 +34,7 @@ function PrototypeSearch({ householdId }: { householdId: string }) {
 
   return (
     <div>
-      <ScreenHeader
-        title="Search"
-        description="Household catalog only. Provider catalogs stay in the Add flow later."
-      />
+      <ScreenHeader title="Search" />
       <div className="relative mb-5">
         <Search
           className="pointer-events-none absolute top-1/2 left-4 size-[18px] -translate-y-1/2 text-muted-foreground"

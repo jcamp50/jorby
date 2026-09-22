@@ -1,7 +1,7 @@
 # Foundry OSDK in this repo
 
-**Status:** Consumer frontend on `@jorby/sdk@0.3.0`  
-**Last updated:** 2026-09-06
+**Status:** Consumer frontend on `@jorby/sdk@0.14.0`  
+**Last updated:** 2026-09-13
 
 This GitHub repo consumes a generated consumer SDK. It does not contain Ontology definitions.
 
@@ -45,14 +45,14 @@ Once `@jorby/sdk` is a dependency, GitHub Actions needs a read-only `FOUNDRY_TOK
 ## Verified versions
 
 ```text
-@jorby/sdk    0.3.0
-@osdk/react   2.63.0
-@osdk/client  2.63.0
-@osdk/api     2.63.0
+@jorby/sdk    0.14.0
+@osdk/react   2.67.0
+@osdk/client  2.67.0
+@osdk/api     2.67.0
 @osdk/oauth   1.13.0
 ```
 
-Consumer imports go through `apps/web/src/osdk/resources.ts`. That barrel re-exports `JorbySharedNote`, `getMyMembership`, and the function-backed list/note Actions. Do not import `provisionJorbyHousehold`. New list work uses `addJorbyListItemAtPosition`, `setJorbyListItemCompletion`, `saveJorbySharedList`, and `setJorbySharedListArchived` rather than the older revision/rank Actions.
+Consumer imports go through `apps/web/src/osdk/resources.ts`. That barrel re-exports exactly the union of generated `$Objects`, `$Actions`, `$Queries`, and `$Interfaces`: 72 resource exports. A Vitest contract test compares those runtime keys mechanically. Do not import `provisionJorbyHousehold` or the six removed legacy List symbols (`archiveJorbySharedList`, `completeJorbyListItem`, `reopenJorbyListItem`, `restoreJorbySharedList`, `updateJorbyListItem`, `updateJorbySharedList`).
 
 After changing `@jorby/sdk` versions, restart Vite with `--force` so the prebundle picks up new exports.
 

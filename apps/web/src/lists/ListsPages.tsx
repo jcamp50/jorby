@@ -2,6 +2,7 @@ import { ListTodo, Pin, Plus } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { CardGroup, LinkRow, RowList } from '@/components/jorby/card-group'
+import { ListCreate } from '@/components/jorby/create/forms'
 import { MemberChip } from '@/components/jorby/member-mark'
 import { BackLink, EmptyState, ScreenHeader, StickyActions } from '@/components/jorby/screen'
 import { NotFoundState } from '@/components/jorby/states'
@@ -24,12 +25,12 @@ export function ListsIndexPage() {
 }
 
 function PrototypeListsIndex({ householdId }: { householdId: string }) {
-  const { lists, items } = usePrototype()
+  const { lists, items, createList } = usePrototype()
   const sorted = [...lists].sort((a, b) => Number(b.isPinned) - Number(a.isPinned))
 
   return (
     <div>
-      <ScreenHeader title="Lists" description="Pinned first. Either of us can check things off." />
+      <ScreenHeader title="Lists" />
       {sorted.length === 0 ? (
         <EmptyState>No lists yet.</EmptyState>
       ) : (
@@ -58,6 +59,17 @@ function PrototypeListsIndex({ householdId }: { householdId: string }) {
           </RowList>
         </CardGroup>
       )}
+      <ListCreate
+        onCreate={(input) =>
+          toastResult(
+            createList(input.name, {
+              description: input.description,
+              isPinned: input.isPinned,
+              tags: input.tags,
+            }),
+          )
+        }
+      />
     </div>
   )
 }

@@ -28,11 +28,6 @@ export function FinanceShell() {
       <PageWash />
 
       <header className="relative z-10">
-        <p className="px-4 pt-1 pb-0.5 text-center text-[11px] font-medium text-foreground/45">
-          {live
-            ? 'Jorby Finance · live household, mock money'
-            : 'Jorby Finance · local mock data · not Foundry'}
-        </p>
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-2">
           <NavLink
             to={householdAppsPath(householdId)}

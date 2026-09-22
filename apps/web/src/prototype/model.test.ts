@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { createSeedState, everyoneWants, jordan, reviewSpread, sam } from '@/prototype/model'
+import {
+  catalogHits,
+  createSeedState,
+  everyoneWants,
+  extraPlaceCatalog,
+  jordan,
+  reviewSpread,
+  sam,
+} from '@/prototype/model'
 
 describe('everyone wants (D-WATCH-006)', () => {
   const base = createSeedState().watch[0]
@@ -15,6 +23,16 @@ describe('everyone wants (D-WATCH-006)', () => {
 
   it('is false when the household has no active members', () => {
     expect(everyoneWants({ ...base, wantsMembershipIds: [] }, 0)).toBe(false)
+  })
+})
+
+describe('catalog search', () => {
+  it('needs two characters and skips names already in the household', () => {
+    expect(catalogHits(extraPlaceCatalog, 'k', [])).toEqual([])
+    expect(catalogHits(extraPlaceCatalog, 'katz', []).map((hit) => hit.name)).toEqual([
+      'Katz’s Delicatessen',
+    ])
+    expect(catalogHits(extraPlaceCatalog, 'katz', ['Katz’s Delicatessen'])).toEqual([])
   })
 })
 

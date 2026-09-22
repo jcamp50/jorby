@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom'
 import { Amount } from '@/components/jorby/amount'
 import { CardGroup } from '@/components/jorby/card-group'
 import { EmptyState, ScreenHeader } from '@/components/jorby/screen'
-import { FinanceViewBar, useFinanceView, viewLabel } from '@/finance/FinanceView'
+import { FinanceViewBar, useFinanceView } from '@/finance/FinanceView'
 import { LiveFinancePending } from '@/finance/LiveFinancePending'
 import { MOCK_NOW } from '@/finance/format'
 import { Meter } from '@/finance/meter'
@@ -26,10 +26,7 @@ function PrototypeFinanceBudgets() {
 
   return (
     <div>
-      <ScreenHeader
-        title="Budgets"
-        description={`${viewLabel(view, members)} monthly limits.`}
-      />
+      <ScreenHeader title="Budgets" />
       <FinanceViewBar />
       {budgets.length === 0 ? (
         <EmptyState>No budgets in this view.</EmptyState>

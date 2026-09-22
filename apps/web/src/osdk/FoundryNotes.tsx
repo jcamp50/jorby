@@ -10,10 +10,11 @@ import {
   saveJorbySharedNote,
 } from '@/osdk/resources'
 import { useOsdkAction, useOsdkObject, useOsdkObjects } from '@osdk/react'
-import { Plus, StickyNote } from 'lucide-react'
-import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { StickyNote } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useBlocker, useNavigate } from 'react-router-dom'
 import { CardGroup, LinkRow, RowList } from '@/components/jorby/card-group'
+import { NoteCreate } from '@/components/jorby/create/forms'
 import { BackLink, EmptyState, ScreenHeader, StickyActions } from '@/components/jorby/screen'
 import { ErrorState, NotFoundState, RefreshingBanner } from '@/components/jorby/states'
 import { Tile } from '@/components/jorby/tile'
@@ -21,7 +22,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { NoteContent } from '@/notes/NoteContent'
 import { AppErrorCode } from '@/lib/errors'
 import { householdPath, noteDetailPath } from '@/lib/routes'
 import { useMyMembership } from '@/osdk/useMyMembership'
@@ -51,24 +52,23 @@ export function FoundryNotesIndex({ householdId }: { householdId: string }) {
     enabled: Boolean(householdId),
   })
   const { applyAction, isPending } = useOsdkAction(createJorbySharedNote)
-  const [title, setTitle] = useState('')
   const notes = data ?? []
 
-  async function onCreate(event: FormEvent) {
-    event.preventDefault()
+  async function onCreate(title: string, markdownBody: string, tags: string[]) {
     if (!household || title.trim() === '') {
-      return
+      return false
     }
     try {
       await applyAction({
         household,
         title: title.trim(),
-        markdownBody: '',
-        tags: [],
+        markdownBody,
+        tags,
       })
-      setTitle('')
+      return true
     } catch {
       toast.error('The note could not be created.')
+      return false
     }
   }
 
@@ -78,7 +78,7 @@ export function FoundryNotesIndex({ householdId }: { householdId: string }) {
 
   return (
     <div>
-      <ScreenHeader title="Notes" description="Markdown, tags, explicit save. Lock while you edit." />
+      <ScreenHeader title="Notes" />
       {isLoading && notes.length === 0 ? (
         <p className="text-sm text-muted-foreground">Loading notes…</p>
       ) : notes.length === 0 ? (
@@ -106,26 +106,10 @@ export function FoundryNotesIndex({ householdId }: { householdId: string }) {
         </>
       )}
 
-      <StickyActions>
-        <form onSubmit={onCreate} className="flex gap-2">
-          <Input
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="New note title"
-            aria-label="New note title"
-            className="h-11 rounded-full border-0 bg-secondary"
-          />
-          <Button
-            type="submit"
-            size="lg"
-            className="h-11 shrink-0 rounded-full"
-            disabled={isPending || householdLoading || !household || title.trim() === ''}
-          >
-            <Plus aria-hidden />
-            Create
-          </Button>
-        </form>
-      </StickyActions>
+      <NoteCreate
+        busy={isPending || householdLoading || !household}
+        onCreate={(input) => onCreate(input.title, input.markdownBody, input.tags)}
+      />
     </div>
   )
 }
@@ -287,17 +271,15 @@ export function FoundryNoteDetail({
     <div>
       <BackLink to={householdPath(householdId, 'notes')} label="Notes" />
       <ScreenHeader
-        title="Edit note"
+        title="Viewing note"
         description={
-          ownsLock
-            ? 'You have the edit lock. Save is explicit.'
-            : lockActive
-              ? `${lockOwner?.displayName ?? 'Someone else'} is editing. The lock expires ${
-                  note.lockExpiresAt
-                    ? new Date(note.lockExpiresAt).toLocaleTimeString()
-                    : 'soon'
-                }.`
-              : 'Read-only until you get the edit lock.'
+          lockActive && !ownsLock
+            ? `${lockOwner?.displayName ?? 'Someone else'} is editing. The lock expires ${
+                note.lockExpiresAt
+                  ? new Date(note.lockExpiresAt).toLocaleTimeString()
+                  : 'soon'
+              }.`
+            : undefined
         }
       />
 
@@ -364,16 +346,12 @@ export function FoundryNoteDetail({
             onChange={(event) => setTitle(event.target.value)}
           />
         </div>
-        <div className="mt-4 space-y-2">
-          <Label htmlFor="foundry-note-body">Markdown</Label>
-          <Textarea
-            id="foundry-note-body"
-            className="min-h-64 rounded-xl border-0 bg-secondary font-mono"
-            value={body}
-            disabled={readOnly}
-            onChange={(event) => setBody(event.target.value)}
-          />
-        </div>
+        <NoteContent
+          id="foundry-note-body"
+          value={body}
+          onChange={setBody}
+          readOnly={readOnly}
+        />
       </div>
 
       <StickyActions>

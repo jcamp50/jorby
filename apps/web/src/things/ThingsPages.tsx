@@ -1,35 +1,21 @@
-import { Gift, Lock, MapPin, Package, Tag } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Gift, Package, Tag } from 'lucide-react'
+import { useMemo } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { Amount } from '@/components/jorby/amount'
-import { CardGroup, Row, RowList, LinkRow } from '@/components/jorby/card-group'
-import { MemberMark } from '@/components/jorby/member-mark'
-import {
-  BackLink,
-  EmptyState,
-  HeroCard,
-  ScreenHeader,
-  StickyActions,
-} from '@/components/jorby/screen'
+import { CardGroup, RowList, LinkRow } from '@/components/jorby/card-group'
+import { ThingCreate } from '@/components/jorby/create/forms'
+import { EmptyState, ScreenHeader } from '@/components/jorby/screen'
+import { SectionTabs } from '@/components/jorby/section-tabs'
 import { NotFoundState } from '@/components/jorby/states'
 import { Tile } from '@/components/jorby/tile'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toastResult } from '@/lib/action-toast'
 import { householdPath, thingDetailPath } from '@/lib/routes'
 import { thingLens, type ThingLens } from '@/lib/thing-lifecycle'
-import { FoundryCatalogPending } from '@/osdk/FoundryCatalogPending'
+import { FoundryThingDetail, FoundryThingsIndex } from '@/osdk/FoundryThings'
 import { usesFoundryData } from '@/osdk/household-route'
 import { usePrototype } from '@/prototype/PrototypeProvider'
+import { ThingDetailView } from '@/things/ThingDetailView'
 
 const lenses: ThingLens[] = ['Wish', 'Home', 'History']
 
@@ -42,19 +28,14 @@ function lifecycleLabel(state: string) {
 export function ThingsIndexPage() {
   const { householdId = '' } = useParams()
   if (usesFoundryData(householdId)) {
-    return (
-      <FoundryCatalogPending
-        title="Things"
-        body="Things are not in the consumer SDK yet. Reservations stay visible — there is no surprise-gift hiding."
-      />
-    )
+    return <FoundryThingsIndex householdId={householdId} />
   }
   return <PrototypeThingsIndex householdId={householdId} />
 }
 
 function PrototypeThingsIndex({ householdId }: { householdId: string }) {
   const [params, setParams] = useSearchParams()
-  const { things } = usePrototype()
+  const { things, members, createThing } = usePrototype()
   const lens = (
     lenses.includes(params.get('lens') as ThingLens) ? params.get('lens') : 'Wish'
   ) as ThingLens
@@ -65,18 +46,13 @@ function PrototypeThingsIndex({ householdId }: { householdId: string }) {
 
   return (
     <div>
-      <ScreenHeader title="Things" description="One object type. The tab is just a lens." />
-      <Tabs value={lens} onValueChange={(value) => setParams({ lens: value })} className="mb-4">
-        {/* The default list is h-9; override at the same group-variant specificity so each
-            trigger clears a 44px touch target. */}
-        <TabsList className="w-full rounded-full bg-card/70 shadow-card backdrop-blur group-data-[orientation=horizontal]/tabs:h-13">
-          {lenses.map((item) => (
-            <TabsTrigger key={item} value={item} className="flex-1 rounded-full">
-              {item}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <ScreenHeader title="Things" />
+      <SectionTabs
+        label="Thing lens"
+        value={lens}
+        onValueChange={(value) => setParams({ lens: value })}
+        options={lenses.map((item) => ({ value: item, label: item }))}
+      />
       {visible.length === 0 ? (
         <EmptyState>Nothing in {lens} yet.</EmptyState>
       ) : (
@@ -115,6 +91,22 @@ function PrototypeThingsIndex({ householdId }: { householdId: string }) {
           </RowList>
         </CardGroup>
       )}
+      <ThingCreate
+        defaultLens={lens === 'Home' ? 'Home' : 'Wish'}
+        members={members}
+        onCreate={(input) =>
+          toastResult(
+            createThing(input.name, {
+              lifecycleState: input.lens === 'Home' ? 'OWNED' : 'IDEA',
+              priceAmount: input.priceAmount,
+              recipientLabel: input.recipientLabel,
+              notes: input.notes,
+              tags: input.tags,
+              photoUrl: input.photo?.previewUrl,
+            }),
+          )
+        }
+      />
     </div>
   )
 }
@@ -122,187 +114,52 @@ function PrototypeThingsIndex({ householdId }: { householdId: string }) {
 export function ThingDetailPage() {
   const { thingId = '', householdId = '' } = useParams()
   if (usesFoundryData(householdId)) {
-    return (
-      <FoundryCatalogPending
-        title="Things"
-        body="Things are not in the consumer SDK yet. Reservations stay visible — there is no surprise-gift hiding."
-      />
-    )
+    return <FoundryThingDetail householdId={householdId} thingId={thingId} />
   }
   return <PrototypeThingDetail householdId={householdId} thingId={thingId} />
 }
 
 function PrototypeThingDetail({ householdId, thingId }: { householdId: string; thingId: string }) {
-  const { things, members, currentMembershipId, reserveThing, releaseThing, purchaseThing } =
+  const { things, members, currentMembershipId, reserveThing, releaseThing, purchaseThing, saveThingNotes } =
     usePrototype()
   const thing = things.find((item) => item.id === thingId)
-  const [purchaseOpen, setPurchaseOpen] = useState(false)
 
   if (!thing) {
     return <NotFoundState backTo={householdPath(householdId, 'things')} backLabel="Things" />
   }
 
-  const lens = thingLens(thing.lifecycleState)
   const reserver = members.find((member) => member.id === thing.reservedByMembershipId)
-  const canReserve =
-    (thing.lifecycleState === 'IDEA' || thing.lifecycleState === 'BUYING') &&
-    !thing.reservedByMembershipId
-  const canRelease = thing.reservedByMembershipId === currentMembershipId
-
-  const outcomeMessages = {
-    OWNED: 'Moved to Home.',
-    GIFTED: 'Marked as gifted.',
-    BOUGHT: 'Left as bought.',
-  }
-
-  function decide(state: 'OWNED' | 'GIFTED' | 'BOUGHT') {
-    // The item leaves the current lens, so the outcome needs stating explicitly.
-    toastResult(purchaseThing(thingId, state), outcomeMessages[state])
-    setPurchaseOpen(false)
-  }
 
   return (
-    <div>
-      <BackLink to={householdPath(householdId, 'things')} label="Things" />
-      <ScreenHeader title={thing.name} description={thing.notes} />
-
-      <HeroCard eyebrow={thing.priceAmount !== undefined ? 'Price' : lens}>
-        {thing.priceAmount !== undefined ? (
-          <Amount
-            value={thing.priceAmount}
-            currency={thing.priceCurrency ?? 'USD'}
-            size="lg"
-            className="block"
-          />
-        ) : (
-          <p className="text-2xl font-bold tracking-tight capitalize">
-            {lifecycleLabel(thing.lifecycleState)}
-          </p>
-        )}
-        <p className="mt-1.5 text-[0.9375rem] font-medium text-white/85 capitalize">
-          {lens} · {lifecycleLabel(thing.lifecycleState)}
-        </p>
-      </HeroCard>
-
-      <CardGroup label="Details">
-        <RowList>
-          {thing.recipientLabel ? (
-            <Row
-              leading={<Tile icon={Gift} tone="things" variant="soft" />}
-              title="For"
-              trailing={<span className="text-sm font-semibold">{thing.recipientLabel}</span>}
-            />
-          ) : null}
-          {thing.storageLocation ? (
-            <Row
-              leading={<Tile icon={MapPin} tone="things" variant="soft" />}
-              title="Lives in"
-              trailing={<span className="text-sm font-semibold">{thing.storageLocation}</span>}
-            />
-          ) : null}
-          <Row
-            leading={<Tile icon={Package} tone="things" variant="soft" />}
-            title="Lifecycle"
-            trailing={
-              <span className="text-sm font-semibold capitalize">
-                {lifecycleLabel(thing.lifecycleState)}
-              </span>
-            }
-          />
-        </RowList>
-      </CardGroup>
-
-      {reserver ? (
-        <CardGroup label="Reservation">
-          <Row
-            leading={<MemberMark member={reserver} size="default" />}
-            title={`Reserved by ${reserver.displayName}`}
-            subtitle="Visible to us both — no surprise-gift hiding."
-            wrap
-            trailing={<Lock className="size-4 text-muted-foreground" aria-hidden />}
-          />
-        </CardGroup>
-      ) : null}
-
-      {canReserve || canRelease || lens === 'Wish' ? (
-        <StickyActions>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            {canReserve ? (
-              <Button
-                type="button"
-                size="lg"
-                className="h-11 flex-1 rounded-full"
-                onClick={() =>
-                  toastResult(reserveThing(thing.id), 'Reserved. The other of us can see this.')
-                }
-              >
-                Reserve
-              </Button>
-            ) : null}
-            {canRelease ? (
-              <Button
-                type="button"
-                size="lg"
-                variant="outline"
-                className="h-11 flex-1 rounded-full"
-                onClick={() => toastResult(releaseThing(thing.id), 'Reservation released.')}
-              >
-                Release reservation
-              </Button>
-            ) : null}
-            {lens === 'Wish' ? (
-              <Button
-                type="button"
-                size="lg"
-                variant="outline"
-                className="h-11 flex-1 rounded-full"
-                onClick={() => setPurchaseOpen(true)}
-              >
-                Mark purchased
-              </Button>
-            ) : null}
-          </div>
-        </StickyActions>
-      ) : null}
-
-      <Sheet open={purchaseOpen} onOpenChange={setPurchaseOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl">
-          <SheetHeader>
-            <SheetTitle>What happened?</SheetTitle>
-            <SheetDescription>
-              Purchasing clears the reservation. Pick where {thing.name} goes next.
-            </SheetDescription>
-          </SheetHeader>
-          <SheetFooter>
-            <Button
-              type="button"
-              size="lg"
-              className="h-12 rounded-full"
-              onClick={() => decide('OWNED')}
-            >
-              Move to Home
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              variant="outline"
-              className="h-12 rounded-full"
-              onClick={() => decide('GIFTED')}
-            >
-              Mark gifted
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              variant="outline"
-              className="h-12 rounded-full"
-              onClick={() => decide('BOUGHT')}
-            >
-              Leave as bought
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-    </div>
+    <ThingDetailView
+      householdId={householdId}
+      name={thing.name}
+      state={thing.lifecycleState}
+      notes={thing.notes}
+      recipientLabel={thing.recipientLabel}
+      storageLocation={thing.storageLocation}
+      price={thing.priceAmount}
+      currency={thing.priceCurrency}
+      photoUrl={
+        thing.photoUrl ?? `https://picsum.photos/seed/${encodeURIComponent(thing.id)}/1200/900`
+      }
+      reservedBy={reserver}
+      currentMembershipId={currentMembershipId}
+      onSaveNotes={(notes) => {
+        toastResult(saveThingNotes(thingId, notes), 'Saved.')
+      }}
+      onReserve={() => {
+        toastResult(reserveThing(thing.id), 'You are getting this.')
+      }}
+      onRelease={() => {
+        toastResult(releaseThing(thing.id), 'Reservation cleared.')
+      }}
+      onKeep={() => {
+        toastResult(purchaseThing(thingId, 'OWNED'), 'Moved to Home.')
+      }}
+      onGift={() => {
+        toastResult(purchaseThing(thingId, 'GIFTED'), 'Marked as given away.')
+      }}
+    />
   )
 }

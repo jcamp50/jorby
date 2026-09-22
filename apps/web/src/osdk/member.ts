@@ -30,3 +30,14 @@ export function memberFromMembership(
     avatarUrl: membership.avatarUrl,
   }
 }
+
+export function memberFromName(id: string, displayName: string): Member {
+  const name = displayName.trim() || 'Someone'
+  return {
+    id,
+    displayName: name,
+    initials: initialsFrom(name),
+    profileLabel: name,
+    profileColor: 'clay',
+  }
+}

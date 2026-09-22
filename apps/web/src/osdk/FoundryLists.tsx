@@ -13,6 +13,7 @@ import { ListTodo, Pin, Plus } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CardGroup, LinkRow, RowList } from '@/components/jorby/card-group'
+import { ListCreate } from '@/components/jorby/create/forms'
 import { BackLink, EmptyState, ScreenHeader, StickyActions } from '@/components/jorby/screen'
 import { ErrorState, NotFoundState, RefreshingBanner } from '@/components/jorby/states'
 import { Tile } from '@/components/jorby/tile'
@@ -40,19 +41,18 @@ export function FoundryListsIndex({ householdId }: { householdId: string }) {
     enabled: Boolean(householdId),
   })
   const { applyAction, isPending } = useOsdkAction(createJorbySharedList)
-  const [name, setName] = useState('')
   const lists = [...(data ?? [])].sort((a, b) => Number(b.isPinned) - Number(a.isPinned))
 
-  async function onCreate(event: FormEvent) {
-    event.preventDefault()
+  async function onCreate(name: string) {
     if (!household || name.trim() === '') {
-      return
+      return false
     }
     try {
       await applyAction({ household, listName: name.trim() })
-      setName('')
+      return true
     } catch {
       toast.error('The list could not be created.')
+      return false
     }
   }
 
@@ -62,7 +62,7 @@ export function FoundryListsIndex({ householdId }: { householdId: string }) {
 
   return (
     <div>
-      <ScreenHeader title="Lists" description="Pinned first. Either of us can check things off." />
+      <ScreenHeader title="Lists" />
       {isLoading && lists.length === 0 ? (
         <p className="text-sm text-muted-foreground">Loading lists…</p>
       ) : lists.length === 0 ? (
@@ -86,26 +86,10 @@ export function FoundryListsIndex({ householdId }: { householdId: string }) {
         </>
       )}
 
-      <StickyActions>
-        <form onSubmit={onCreate} className="flex gap-2">
-          <Input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="New list name"
-            aria-label="New list name"
-            className="h-11 rounded-full border-0 bg-secondary"
-          />
-          <Button
-            type="submit"
-            size="lg"
-            className="h-11 shrink-0 rounded-full"
-            disabled={isPending || householdLoading || !household || name.trim() === ''}
-          >
-            <Plus aria-hidden />
-            Create
-          </Button>
-        </form>
-      </StickyActions>
+      <ListCreate
+        busy={isPending || householdLoading || !household}
+        onCreate={(input) => onCreate(input.name)}
+      />
     </div>
   )
 }

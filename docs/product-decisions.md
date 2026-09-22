@@ -1,7 +1,7 @@
 # Jorby product decisions
 
 **Status:** Living decision register  
-**Last updated:** 2026-09-06  
+**Last updated:** 2026-09-13  
 **Product:** Jorby v1
 
 ## 1. Product statement
@@ -10,10 +10,25 @@ Jorby is a private shared-household application. Its first release is a shared l
 
 The interface is optimized for couples, but the domain model supports any household size.
 
+## Current implementation outcome — 2026-09-13
+
+See [Implementation status](./implementation-status.md) for the exact deployed-resource and RID record.
+
+- Public OAuth/PKCE and localhost CORS work for the external consumer frontend.
+- One live Household, `Jordan & Abby`, and Jordan's active Membership are provisioned.
+- Household, Lists, Notes, Places, Watch, and Things concrete Ontology types, links, and governed Actions are deployed.
+- `@jorby/sdk@0.14.0` is the exact generated consumer package: 15 objects, 31 links, 48 consumer Actions, 6 query Functions, and 3 interfaces; the Functions release is `0.6.0`. `getJorbyWatchTonight` is `0.6.0`; `getMyMembership` and the four Places/Watch provider queries remain `0.5.0`. Function-backed edits take identity from trusted Action context; do not send `currentUserId` from the browser.
+- Six obsolete legacy List Action RIDs were repurposed into composite Places/Watch/Things Actions to remain within the enrollment's 60-Action cap. Their six old generated symbols are no longer available.
+- Shared Notes support explicit Save and a five-minute Membership-owned edit lease.
+- Places and Watch provider adapters are deterministic `MOCK` implementations only. Real provider credentials and Foundry egress remain pending.
+- The enrollment does not support OAuth Client Credentials/Application permissions. Automated invite, join, leave, and group administration are deferred; membership is manually administered through a Household group.
+- `JorbyHouseholdScoped`, `JorbyContent`, and `JorbyMemberReaction` are deployed in the Ontology and generated SDK with 13/5/3 concrete implementations. Global polymorphic search is enabled at the Ontology/SDK layer.
+- This GitHub frontend still hosts the approved Finance mock app mode (`D-MONEY-*`). Foundry has no money objects.
+
 ## 2. Product principles
 
 1. **One household, multiple voices.** Reviewable records support a separate rating and review for every active or historical member.
-2. **Search to add culture; type to add life.** Places and watch titles come from provider search. Lists, notes, dishes, and things are entered by people.
+2. **Search or type to add culture; type to add life.** Places and watch titles may come from provider search or manual household entry. Lists, notes, dishes, and things are entered by people.
 3. **Status belongs on the record.** Want, watched, owned, gifted, and related states are lifecycle values, not separate products.
 4. **Household-visible by default.** All v1 household content is visible to every active household member.
 5. **Money is a separate household app.** Finance is not a seventh catalog tab. It is household-scoped, mock-first, and has no bank connections or Foundry ledger yet.
@@ -127,6 +142,11 @@ Home catalog Home is a thin orientation layer, not a separate data-entry product
 | `D-PLACE-009` | Dish reviews describe the reusable Dish overall, not an individual Visit.                                             |
 | `D-PLACE-010` | Ratings use 0.5 to 5 stars in half-star increments.                                                                   |
 | `D-PLACE-011` | No uploaded visit/place photos in v1. Provider image metadata may be shown when permitted.                            |
+| `D-PLACE-012` | A member may create a manual Place when provider search is unavailable or unsuitable.                                 |
+| `D-PLACE-013` | Manual Places remain private Household entries and never become shared canonical provider records.                    |
+| `D-PLACE-014` | A manual Place may later be reconciled to a provider record without replacing its Entry ID or history.                |
+| `D-PLACE-015` | Provider-backed Places may use a Household-specific display-title override that refresh does not overwrite.           |
+| `D-PLACE-016` | A Place review requires the Place Entry to be `BEEN`; a logged Visit is not required.                                 |
 
 ### 4.7 Watch
 
@@ -140,6 +160,11 @@ Home catalog Home is a thin orientation layer, not a separate data-entry product
 | `D-WATCH-006` | A title qualifies for the household smart queue only when every active member wants to watch it.      |
 | `D-WATCH-007` | Ratings use 0.5 to 5 stars in half-star increments.                                                   |
 | `D-WATCH-008` | No episode-level objects, reviews, or streaming-link product in v1.                                   |
+| `D-WATCH-009` | A member may create a manual Watch title; manual facts remain on the private Household Entry.                          |
+| `D-WATCH-010` | A manual Watch Entry may later be reconciled to provider metadata without changing its ID or history.                  |
+| `D-WATCH-011` | Provider-backed titles may use a Household-specific display-title override preserved across refresh.                   |
+| `D-WATCH-012` | A reaction may become a rated Review only while the Entry is `WATCHED` or `DROPPED`.                                   |
+| `D-WATCH-013` | Show progress requires positive season/episode values; validate known season bounds but not per-season episode bounds. |
 
 ### 4.8 Things
 
@@ -151,11 +176,12 @@ Home catalog Home is a thin orientation layer, not a separate data-entry product
 | `D-THING-004` | On purchase, the action asks whether to move the Thing to Home, mark it Gifted, or leave it Bought. |
 | `D-THING-005` | Recipient can be a household member, the whole household, or an external person label.              |
 | `D-THING-006` | A Thing can have zero or one assignee; null means anyone/either.                                    |
-| `D-THING-007` | Household default currency initializes prices, but each entered price stores its currency snapshot. |
+| `D-THING-007` | Price is optional and stored as nonnegative integer minor units plus an ISO currency snapshot; later edits replace the current price. |
 | `D-THING-008` | Gift reservations are visible to the household; surprise-gift privacy is not part of v1.            |
 | `D-THING-009` | Only the reserving member normally clears a reservation.                                            |
 | `D-THING-010` | Removing the reserving member automatically releases the reservation.                               |
 | `D-THING-011` | No uploaded Thing photos in v1; an optional external image URL is allowed.                          |
+| `D-THING-012` | One Thing represents one physical or intended unit; identical units are separate Thing objects.     |
 
 ### 4.9 Home and search
 
@@ -166,8 +192,19 @@ Home catalog Home is a thin orientation layer, not a separate data-entry product
 | `D-SEARCH-001` | v1 includes global search across Lists, Notes, Places, Watch, and Things.                                        |
 | `D-SEARCH-002` | Global search includes top-level names/titles, Note bodies, List Item text, reviews, and shared notes.           |
 | `D-SEARCH-003` | Search returns top-level records, even when a child record provided the match.                                   |
+| `D-SEARCH-004` | `JorbyContent` becomes the searchable cross-section contract when Places is introduced.                          |
 
-### 4.10 Frontend experience
+### 4.10 Backend and OSDK evolution
+
+| ID           | Decision                                                                                                                     |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `D-ARCH-001` | Implement the remaining backend sections in the order Places, Watch, then Things.                                            |
+| `D-ARCH-002` | Canonical provider objects are shared and consumer-readable; all Household state and manual facts remain on private entries. |
+| `D-ARCH-003` | Add non-searchable `JorbyHouseholdScoped` and searchable `JorbyContent` with Places; add `JorbyMemberReaction` with reviews. |
+| `D-ARCH-004` | New Ontology API names retain the `Jorby` prefix used by every deployed object type.                                         |
+| `D-ARCH-005` | The consumer SDK and OSDK runtime packages are pinned exactly and regenerated after each Ontology surface change.            |
+
+### 4.11 Frontend experience
 
 | ID         | Decision                                                                    |
 | ---------- | --------------------------------------------------------------------------- |
@@ -176,7 +213,7 @@ Home catalog Home is a thin orientation layer, not a separate data-entry product
 | `D-UI-003` | Use Tailwind CSS, accessible headless primitives, and shadcn components.    |
 | `D-UI-004` | Use `@osdk/react` for new OSDK reads, Actions, and subscriptions.           |
 
-### 4.11 Money / Finance (mock)
+### 4.12 Money / Finance (mock)
 
 | ID            | Decision                                                                                                                                                         |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -220,16 +257,18 @@ Home catalog Home is a thin orientation layer, not a separate data-entry product
 
 These are validation tasks, not reopened product decisions:
 
-1. Verify consumer-mode identity provisioning for the intended users.
-2. Verify that a tightly scoped trusted service can create and manage a household-specific access group.
-3. Verify the consumer user's group changes take effect quickly enough after invitation acceptance/removal.
-4. Confirm object security policies support the selected group-property comparison in the target Ontology.
-5. Confirm the target Ontology uses project-based permissions and Object Storage v2.
-6. Create Google Places and TMDB mock adapters before requesting credentials or egress.
-7. Confirm the final external static hosting provider, OAuth redirect URLs, CORS, and CSP.
-8. Establish the GitHub monorepo and synchronization/migration path from the current Foundry React OSDK repository.
-9. Import only the approved object, interface, Action, and Function resources into the application's generated OSDK.
-10. Validate that `@osdk/react`, `@osdk/client`, and `@osdk/api` are on compatible release lines before frontend work.
+1. **Consumer-mode identity provisioning:** Partially complete. Public OAuth works for the initial user. Second user provisioning remains manual.
+2. **Trusted membership service group management:** Blocked on current plan. The enrollment does not support the OAuth Client Credentials grant / Application permissions.
+3. **Consumer user group propagation:** Verified manually. Group membership in `Jorby Household` grants access to the live Household and Membership objects.
+4. **Group-property object security:** Verified. Object policies using `intersects(user.groupIds(), object.accessGroupId)` correctly govern reads.
+5. **Ontology backend:** Verified. Using Object Storage v2 with project-based permissions.
+6. **Google Places and TMDB adapters:** Partially complete. Provider-neutral contracts and deterministic `MOCK` adapters are deployed; real credentials and Foundry egress approval remain pending.
+7. **Hosting, redirect URLs, and CORS:** Verified for local development. External origin, redirect URL, and CORS allowlist function at `http://localhost:8080`.
+8. **GitHub monorepo workflow:** Active. This repository is the public frontend and membership-service source. Foundry provides Ontology, Functions, and SDKs.
+9. **Approved OSDK imports:** Complete for `0.14.0`. Consumer SDK contains 15 object types, 31 links, 48 consumer Actions, 6 query Functions, and 3 interfaces with 13/5/3 concrete implementations. It excludes service-only provisioning.
+10. **OSDK package compatibility:** Complete. Exactly pinned to `@jorby/sdk@0.14.0`, `@osdk/react@2.67.0`, `@osdk/client@2.67.0`, `@osdk/api@2.67.0`, and `@osdk/oauth@1.13.0`.
+11. **Interfaces/global polymorphic search:** Complete at the Ontology/SDK layer. `JorbyContent` supports polymorphic queries.
+12. **Action capacity:** Complete for the current surface. Six legacy List Action RIDs were repurposed into composite domain Actions to remain within the 60-Action cap.
 
 ## 8. Decision-change template
 

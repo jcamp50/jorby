@@ -25,10 +25,7 @@ function PrototypeSettings() {
 
   return (
     <div>
-      <ScreenHeader
-        title="Household"
-        description="Members are equal. View-as is prototype-only so you can see both voices."
-      />
+      <ScreenHeader title="Household" />
 
       <CardGroup label="Members">
         <RowList>
@@ -63,7 +60,6 @@ function PrototypeSettings() {
         <Row
           leading={<Tile icon={Users} tone="home" variant="soft" />}
           title="Invite link"
-          subtitle="Production invites come from the membership service. This copy is a fake link."
           wrap
         />
         <div className="px-4 pb-4">

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { thingLens } from '@/lib/thing-lifecycle'
+import { allowedThingTransitions, canReserveThing, thingLens, thingStatusLine } from '@/lib/thing-lifecycle'
+import { majorToMinorUnits, minorUnitsToMajor } from '@/lib/price'
 import { displayStarsFromHalfStars, isValidRatingHalfStars } from '@/lib/ratings'
 import { normalizeSearchText } from '@/lib/search'
 import { financePath, householdAppsPath, householdPath, invitePath, listDetailPath } from '@/lib/routes'
@@ -15,6 +16,31 @@ describe('thing lifecycle lenses', () => {
     expect(thingLens('UPGRADE_WANTED')).toBe('Home')
     expect(thingLens('GIFTED')).toBe('History')
     expect(thingLens('SOLD')).toBe('History')
+  })
+
+  it('allows the accepted Wish purchase outcomes', () => {
+    expect(allowedThingTransitions('IDEA')).toEqual(['BUYING', 'BOUGHT', 'OWNED', 'GIFTED'])
+    expect(allowedThingTransitions('BOUGHT')).toEqual(['OWNED', 'GIFTED'])
+    expect(canReserveThing('IDEA')).toBe(true)
+    expect(canReserveThing('OWNED')).toBe(false)
+  })
+
+  it('speaks one status line instead of repeating the enum', () => {
+    expect(thingStatusLine({ state: 'IDEA' })).toBe('On the wish list')
+    expect(thingStatusLine({ state: 'IDEA', reservedByName: 'Jordan' })).toBe(
+      'Jordan is getting this',
+    )
+    expect(thingStatusLine({ state: 'OWNED', storageLocation: 'Kitchen' })).toBe(
+      'In the house · Kitchen',
+    )
+    expect(thingStatusLine({ state: 'GIFTED' })).toBe('Given away')
+  })
+})
+
+describe('price minor units', () => {
+  it('converts USD minor units to major units and back', () => {
+    expect(minorUnitsToMajor('1299', 'USD')).toBe(12.99)
+    expect(majorToMinorUnits(12.99, 'USD')).toBe('1299')
   })
 })
 

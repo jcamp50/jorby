@@ -58,10 +58,7 @@ function PrototypeFinanceHome({ householdId }: { householdId: string }) {
 
   return (
     <div>
-      <ScreenHeader
-        title="Finance"
-        description={`${who} view. Accounts, cards, and this month’s spend.`}
-      />
+      <ScreenHeader title="Finance" />
       <FinanceViewBar />
 
       <HeroCard eyebrow={who === 'Household' ? 'This month' : `${who} this month`}>

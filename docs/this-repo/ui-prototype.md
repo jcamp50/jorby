@@ -1,7 +1,7 @@
 # UI prototype (this repo)
 
 **Status:** Local mock  
-**Last updated:** 2026-09-05  
+**Last updated:** 2026-09-18  
 **Code:** `apps/web/src/prototype`
 
 ## Purpose
@@ -14,6 +14,7 @@ See [design-direction.md](./design-direction.md) for the visual language and [de
 
 - Routes from the agent handoff
 - Six-section navigation
+- Home activity feed shared with live (`CatalogHome` + `ActivityFeed` + `buildActivityFeed`)
 - shadcn `new-york` components on Radix primitives
 - Dual-member ratings and reviews as UI
 - Thing Wish / Home / History lenses
@@ -27,7 +28,7 @@ See [design-direction.md](./design-direction.md) for the visual language and [de
 - After entering a household, `/our-home` asks Home vs Finance. Finance uses a separate shell at `/our-home/finance` with Household / Jordan / Sam views over accounts, spend, budgets, goals, and bills
 - Welcome can start Foundry OAuth when root `.env` is present; “Enter mock household” is a labeled escape hatch
 - A “View as” control in Household settings switches which mock member you are
-- Provider search (Places / Watch) is not connected; entries are seeded
+- Provider search (Places / Watch) on the mock household is seeded local data. Live households use Foundry `MOCK` query Functions, not Google Places or TMDB.
 - Reloading the page resets mock data
 - Load latency and failures are simulated with `?simulate=slow|error|empty`
 - Invite copy is a placeholder string, not a membership-service token

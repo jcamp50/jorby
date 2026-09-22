@@ -10,15 +10,7 @@ export function WelcomePage() {
 
   return (
     <SignedOutShell>
-      <p className="text-[11px] font-medium text-foreground/45">
-        {configured ? 'Foundry OAuth · consumer client' : 'UI prototype · this repo is frontend only'}
-      </p>
-      <h1 className="mt-3 text-[2rem] font-extrabold tracking-[-0.02em]">Jorby</h1>
-      <p className="mt-2 text-[0.9375rem] text-muted-foreground text-pretty">
-        {configured
-          ? 'Sign in with your Foundry account to open a live household. The local mock is still available.'
-          : 'Shared household catalog. OAuth is not configured. Continue into the mock household of Jordan and Sam.'}
-      </p>
+      <h1 className="text-[2rem] font-extrabold tracking-[-0.02em]">Jorby</h1>
       {configured && isSignedIn ? (
         <Button asChild size="lg" className="mt-8 h-12 w-full rounded-full">
           <Link to="/households">Continue to households</Link>

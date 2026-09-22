@@ -6,8 +6,12 @@ import {
   everyoneWants,
   reviewSpread,
   type ListItemRecord,
+  type ListRecord,
   type NoteRecord,
+  type PlaceRecord,
   type PrototypeState,
+  type ThingRecord,
+  type WatchRecord,
 } from '@/prototype/model'
 
 export type LoadStatus = 'loading' | 'ready' | 'error'
@@ -31,11 +35,51 @@ type Action =
   | { type: 'setCurrentMember'; membershipId: string }
   | { type: 'setItemComplete'; itemId: string; isComplete: boolean }
   | { type: 'addListItem'; listId: string; text: string }
+  | {
+      type: 'createList'
+      name: string
+      description?: string
+      isPinned?: boolean
+      tags?: string[]
+    }
+  | { type: 'createNote'; title: string; markdownBody?: string; tags?: string[] }
+  | {
+      type: 'createPlace'
+      name: string
+      neighborhood?: string
+      cuisine?: string
+      visitState?: PlaceRecord['visitState']
+      isFavorite?: boolean
+      sharedNote?: string
+      tags?: string[]
+      photoUrl?: string
+    }
+  | {
+      type: 'createWatch'
+      title: string
+      mediaType: 'MOVIE' | 'SHOW'
+      year?: number
+      status?: WatchRecord['status']
+      wantsIt?: boolean
+      tags?: string[]
+    }
+  | {
+      type: 'createThing'
+      name: string
+      lifecycleState?: ThingRecord['lifecycleState']
+      priceAmount?: number
+      recipientLabel?: string
+      notes?: string
+      tags?: string[]
+      photoUrl?: string
+    }
   | { type: 'saveNote'; noteId: string; title: string; markdownBody: string }
   | { type: 'toggleWantToWatch'; watchId: string }
+  | { type: 'togglePlaceFavorite'; placeId: string }
   | { type: 'reserveThing'; thingId: string }
   | { type: 'releaseThing'; thingId: string }
   | { type: 'purchaseThing'; thingId: string; outcome: 'OWNED' | 'GIFTED' | 'BOUGHT' }
+  | { type: 'saveThingNotes'; thingId: string; notes: string }
 
 type State = PrototypeState & { status: LoadStatus; loadAttempt: number }
 
@@ -49,6 +93,7 @@ function init(): State {
       notes: [],
       places: [],
       placeReviews: {},
+      visits: [],
       watch: [],
       things: [],
       status: 'loading',
@@ -75,15 +120,115 @@ function reducer(state: State, action: Action): State {
           item.id === action.itemId ? { ...item, isComplete: action.isComplete } : item,
         ),
       }
+    case 'createList': {
+      const now = new Date().toISOString()
+      const list: ListRecord = {
+        id: `list-${crypto.randomUUID()}`,
+        name: action.name.trim(),
+        description: action.description?.trim() || undefined,
+        isPinned: action.isPinned === true,
+        tags: action.tags ?? [],
+        createdAt: now,
+        updatedAt: now,
+        createdByMembershipId: state.currentMembershipId,
+        updatedByMembershipId: state.currentMembershipId,
+      }
+      return { ...state, lists: [...state.lists, list] }
+    }
+    case 'createNote': {
+      const now = new Date().toISOString()
+      const note: NoteRecord = {
+        id: `note-${crypto.randomUUID()}`,
+        title: action.title.trim(),
+        markdownBody: action.markdownBody ?? '',
+        tags: action.tags ?? [],
+        createdAt: now,
+        updatedAt: now,
+        createdByMembershipId: state.currentMembershipId,
+        updatedByMembershipId: state.currentMembershipId,
+      }
+      return { ...state, notes: [...state.notes, note] }
+    }
+    case 'createPlace': {
+      const now = new Date().toISOString()
+      const place: PlaceRecord = {
+        id: `place-${crypto.randomUUID()}`,
+        name: action.name.trim(),
+        neighborhood: action.neighborhood?.trim() ?? '',
+        cuisine: action.cuisine?.trim() ?? '',
+        visitState: action.visitState ?? 'WANT_TO_GO',
+        isFavorite: action.isFavorite === true,
+        sharedNote: action.sharedNote?.trim() || undefined,
+        tags: action.tags ?? [],
+        photoUrl: action.photoUrl,
+        createdAt: now,
+        updatedAt: now,
+        createdByMembershipId: state.currentMembershipId,
+        updatedByMembershipId: state.currentMembershipId,
+      }
+      return { ...state, places: [...state.places, place] }
+    }
+    case 'createWatch': {
+      const now = new Date().toISOString()
+      const entry: WatchRecord = {
+        id: `watch-${crypto.randomUUID()}`,
+        title: action.title.trim(),
+        year: action.year ?? new Date().getFullYear(),
+        mediaType: action.mediaType,
+        status: action.status ?? 'WATCHLIST',
+        lastWatchedSeasonNumber: null,
+        lastWatchedEpisodeNumber: null,
+        wantsMembershipIds: action.wantsIt === false ? [] : [state.currentMembershipId],
+        reviews: [],
+        tags: action.tags ?? [],
+        createdAt: now,
+        updatedAt: now,
+        createdByMembershipId: state.currentMembershipId,
+        updatedByMembershipId: state.currentMembershipId,
+      }
+      return { ...state, watch: [...state.watch, entry] }
+    }
+    case 'createThing': {
+      const now = new Date().toISOString()
+      const thing: ThingRecord = {
+        id: `thing-${crypto.randomUUID()}`,
+        name: action.name.trim(),
+        lifecycleState: action.lifecycleState ?? 'IDEA',
+        priceAmount: action.priceAmount,
+        priceCurrency: action.priceAmount !== undefined ? 'USD' : undefined,
+        recipientLabel: action.recipientLabel?.trim() || undefined,
+        notes: action.notes?.trim() || undefined,
+        tags: action.tags ?? [],
+        photoUrl: action.photoUrl,
+        reservedByMembershipId: null,
+        assigneeMembershipId: null,
+        createdAt: now,
+        updatedAt: now,
+        createdByMembershipId: state.currentMembershipId,
+        updatedByMembershipId: state.currentMembershipId,
+      }
+      return { ...state, things: [...state.things, thing] }
+    }
     case 'addListItem': {
+      const now = new Date().toISOString()
       const item: ListItemRecord = {
         id: `li-${crypto.randomUUID()}`,
         listId: action.listId,
         text: action.text.trim(),
         isComplete: false,
         assigneeMembershipId: null,
+        createdAt: now,
+        createdByMembershipId: state.currentMembershipId,
       }
-      return { ...state, items: [...state.items, item] }
+      return {
+        ...state,
+        items: [...state.items, item],
+        lists: state.lists.map((list) =>
+          list.id === action.listId
+            ? { ...list, updatedAt: now, updatedByMembershipId: state.currentMembershipId }
+            : list,
+        ),
+      }
     }
     case 'saveNote':
       return {
@@ -95,8 +240,23 @@ function reducer(state: State, action: Action): State {
                 title: action.title,
                 markdownBody: action.markdownBody,
                 updatedAt: new Date().toISOString(),
+                updatedByMembershipId: state.currentMembershipId,
               }
             : note,
+        ),
+      }
+    case 'togglePlaceFavorite':
+      return {
+        ...state,
+        places: state.places.map((place) =>
+          place.id === action.placeId
+            ? {
+                ...place,
+                isFavorite: !place.isFavorite,
+                updatedAt: new Date().toISOString(),
+                updatedByMembershipId: state.currentMembershipId,
+              }
+            : place,
         ),
       }
     case 'toggleWantToWatch':
@@ -109,6 +269,8 @@ function reducer(state: State, action: Action): State {
           const has = entry.wantsMembershipIds.includes(state.currentMembershipId)
           return {
             ...entry,
+            updatedAt: new Date().toISOString(),
+            updatedByMembershipId: state.currentMembershipId,
             wantsMembershipIds: has
               ? entry.wantsMembershipIds.filter((id) => id !== state.currentMembershipId)
               : [...entry.wantsMembershipIds, state.currentMembershipId],
@@ -140,6 +302,20 @@ function reducer(state: State, action: Action): State {
             : thing,
         ),
       }
+    case 'saveThingNotes':
+      return {
+        ...state,
+        things: state.things.map((thing) =>
+          thing.id === action.thingId
+            ? {
+                ...thing,
+                notes: action.notes === '' ? undefined : action.notes,
+                updatedAt: new Date().toISOString(),
+                updatedByMembershipId: state.currentMembershipId,
+              }
+            : thing,
+        ),
+      }
     default:
       return state
   }
@@ -152,11 +328,51 @@ type PrototypeContextValue = PrototypeState & {
   setCurrentMember: (membershipId: string) => void
   setItemComplete: (itemId: string, isComplete: boolean) => void
   addListItem: (listId: string, text: string) => ActionResult
+  createList: (
+    name: string,
+    extras?: { description?: string; isPinned?: boolean; tags?: string[] },
+  ) => ActionResult
+  createNote: (title: string, extras?: { markdownBody?: string; tags?: string[] }) => ActionResult
+  createPlace: (
+    name: string,
+    extras?: {
+      neighborhood?: string
+      cuisine?: string
+      visitState?: PlaceRecord['visitState']
+      isFavorite?: boolean
+      sharedNote?: string
+      tags?: string[]
+      photoUrl?: string
+    },
+  ) => ActionResult
+  createWatch: (
+    title: string,
+    extras?: {
+      mediaType?: 'MOVIE' | 'SHOW'
+      year?: number
+      status?: WatchRecord['status']
+      wantsIt?: boolean
+      tags?: string[]
+    },
+  ) => ActionResult
+  createThing: (
+    name: string,
+    extras?: {
+      lifecycleState?: ThingRecord['lifecycleState']
+      priceAmount?: number
+      recipientLabel?: string
+      notes?: string
+      tags?: string[]
+      photoUrl?: string
+    },
+  ) => ActionResult
   saveNote: (note: Pick<NoteRecord, 'id' | 'title' | 'markdownBody'>) => ActionResult
   toggleWantToWatch: (watchId: string) => void
+  togglePlaceFavorite: (placeId: string) => void
   reserveThing: (thingId: string) => ActionResult
   releaseThing: (thingId: string) => ActionResult
   purchaseThing: (thingId: string, outcome: 'OWNED' | 'GIFTED' | 'BOUGHT') => ActionResult
+  saveThingNotes: (thingId: string, notes: string) => ActionResult
   unfinishedLists: { list: PrototypeState['lists'][number]; remaining: number }[]
   weShouldPlaces: PrototypeState['places']
   watchTonight: PrototypeState['watch']
@@ -210,6 +426,79 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
         return actionOk
       },
 
+      createList: (name, extras) => {
+        if (name.trim() === '') {
+          return actionFailed(AppErrorCode.VALIDATION_FAILED)
+        }
+        dispatch({
+          type: 'createList',
+          name,
+          description: extras?.description,
+          isPinned: extras?.isPinned,
+          tags: extras?.tags,
+        })
+        return actionOk
+      },
+
+      createNote: (title, extras) => {
+        if (title.trim() === '') {
+          return actionFailed(AppErrorCode.VALIDATION_FAILED)
+        }
+        dispatch({ type: 'createNote', title, markdownBody: extras?.markdownBody, tags: extras?.tags })
+        return actionOk
+      },
+
+      createPlace: (name, extras) => {
+        if (name.trim() === '') {
+          return actionFailed(AppErrorCode.VALIDATION_FAILED)
+        }
+        dispatch({
+          type: 'createPlace',
+          name,
+          neighborhood: extras?.neighborhood,
+          cuisine: extras?.cuisine,
+          visitState: extras?.visitState,
+          isFavorite: extras?.isFavorite,
+          sharedNote: extras?.sharedNote,
+          tags: extras?.tags,
+          photoUrl: extras?.photoUrl,
+        })
+        return actionOk
+      },
+
+      createWatch: (title, extras) => {
+        if (title.trim() === '') {
+          return actionFailed(AppErrorCode.VALIDATION_FAILED)
+        }
+        dispatch({
+          type: 'createWatch',
+          title,
+          mediaType: extras?.mediaType ?? 'MOVIE',
+          year: extras?.year,
+          status: extras?.status,
+          wantsIt: extras?.wantsIt,
+          tags: extras?.tags,
+        })
+        return actionOk
+      },
+
+      createThing: (name, extras) => {
+        if (name.trim() === '') {
+          return actionFailed(AppErrorCode.VALIDATION_FAILED)
+        }
+        dispatch({
+          type: 'createThing',
+          name,
+          lifecycleState: extras?.lifecycleState,
+          priceAmount: extras?.priceAmount,
+          recipientLabel: extras?.recipientLabel,
+          notes: extras?.notes,
+          tags: extras?.tags,
+          photoUrl: extras?.photoUrl,
+        })
+        return actionOk
+      },
+
       saveNote: (note) => {
         if (note.title.trim() === '') {
           return actionFailed(AppErrorCode.VALIDATION_FAILED)
@@ -224,6 +513,7 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
       },
 
       toggleWantToWatch: (watchId) => dispatch({ type: 'toggleWantToWatch', watchId }),
+      togglePlaceFavorite: (placeId) => dispatch({ type: 'togglePlaceFavorite', placeId }),
 
       reserveThing: (thingId) => {
         const thing = state.things.find((item) => item.id === thingId)
@@ -265,6 +555,15 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
         return actionOk
       },
 
+      saveThingNotes: (thingId, notes) => {
+        const thing = state.things.find((item) => item.id === thingId)
+        if (!thing) {
+          return actionFailed(AppErrorCode.NOT_FOUND_OR_HIDDEN)
+        }
+        dispatch({ type: 'saveThingNotes', thingId, notes })
+        return actionOk
+      },
+
       unfinishedLists,
       weShouldPlaces,
       watchTonight,
@@ -280,7 +579,7 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
             .filter((item) => item.listId === list.id)
             .map((item) => item.text)
             .join(' ')
-          if (`${list.name} ${list.description ?? ''} ${itemText}`.toLowerCase().includes(q)) {
+          if (`${list.name} ${list.description ?? ''} ${list.tags.join(' ')} ${itemText}`.toLowerCase().includes(q)) {
             hits.push({
               kind: 'List',
               id: list.id,
@@ -317,7 +616,7 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
         }
         for (const entry of state.watch) {
           const reviewText = entry.reviews.map((review) => review.reviewText).join(' ')
-          if (`${entry.title} ${reviewText}`.toLowerCase().includes(q)) {
+          if (`${entry.title} ${entry.tags.join(' ')} ${reviewText}`.toLowerCase().includes(q)) {
             hits.push({
               kind: 'Watch',
               id: entry.id,
@@ -328,7 +627,7 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
         }
         for (const thing of state.things) {
           if (
-            `${thing.name} ${thing.notes ?? ''} ${thing.recipientLabel ?? ''}`
+            `${thing.name} ${thing.notes ?? ''} ${thing.recipientLabel ?? ''} ${thing.tags.join(' ')}`
               .toLowerCase()
               .includes(q)
           ) {

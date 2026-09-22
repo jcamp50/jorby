@@ -1,91 +1,74 @@
 import { Heart, MapPin, Star } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Stat } from '@/components/jorby/amount'
-import { CardGroup, LinkRow, Row, RowList } from '@/components/jorby/card-group'
-import { averageStars, ReviewGroup } from '@/components/jorby/review'
+import { CardGroup, LinkRow, RowList } from '@/components/jorby/card-group'
+import { PlaceCreate } from '@/components/jorby/create/forms'
+import { averageStars } from '@/components/jorby/review'
 import {
-  BackLink,
   EmptyState,
-  FilterChip,
-  FilterRow,
-  HeroCard,
   ScreenHeader,
 } from '@/components/jorby/screen'
+import { SectionTabs } from '@/components/jorby/section-tabs'
 import { NotFoundState } from '@/components/jorby/states'
 import { Tile } from '@/components/jorby/tile'
 import { Badge } from '@/components/ui/badge'
+import { toastResult } from '@/lib/action-toast'
 import { householdPath, placeDetailPath } from '@/lib/routes'
-import { FoundryCatalogPending } from '@/osdk/FoundryCatalogPending'
+import { FoundryPlaceDetail, FoundryPlacesIndex } from '@/osdk/FoundryPlaces'
 import { usesFoundryData } from '@/osdk/household-route'
-import { reviewSpread } from '@/prototype/model'
+import { PlaceDetailView } from '@/places/PlaceDetailView'
+import { catalogHits, extraPlaceCatalog, reviewSpread } from '@/prototype/model'
 import { usePrototype } from '@/prototype/PrototypeProvider'
 
-type PlaceFilter = 'all' | 'want' | 'been' | 'favorite' | 'disagree'
+type PlaceFilter = 'want' | 'been' | 'favorite'
 
 const filters: { id: PlaceFilter; label: string }[] = [
-  { id: 'all', label: 'All' },
   { id: 'want', label: 'Want to go' },
   { id: 'been', label: 'Been' },
   { id: 'favorite', label: 'Favorite' },
-  { id: 'disagree', label: 'We disagree' },
 ]
 
 export function PlacesIndexPage() {
   const { householdId = '' } = useParams()
   if (usesFoundryData(householdId)) {
-    return (
-      <FoundryCatalogPending
-        title="Places"
-        body="Places are not in the consumer SDK yet. Provider search will stay in Foundry Functions, not the browser."
-      />
-    )
+    return <FoundryPlacesIndex householdId={householdId} />
   }
   return <PrototypePlacesIndex householdId={householdId} />
 }
 
 function PrototypePlacesIndex({ householdId }: { householdId: string }) {
-  const { places, placeReviews } = usePrototype()
-  const [filter, setFilter] = useState<PlaceFilter>('all')
+  const { places, placeReviews, createPlace } = usePrototype()
+  const [filter, setFilter] = useState<PlaceFilter>('want')
+  const [query, setQuery] = useState('')
+  const hits = catalogHits(
+    extraPlaceCatalog,
+    query,
+    places.map((place) => place.name),
+  )
 
   const visible = useMemo(() => {
     return places.filter((place) => {
-      const reviews = placeReviews[place.id]
       if (filter === 'want') {
         return place.visitState === 'WANT_TO_GO'
       }
       if (filter === 'been') {
         return place.visitState === 'BEEN'
       }
-      if (filter === 'favorite') {
-        return place.isFavorite
-      }
-      if (filter === 'disagree') {
-        return (reviewSpread(reviews) ?? 0) >= 3
-      }
-      return true
+      return place.isFavorite
     })
-  }, [filter, places, placeReviews])
+  }, [filter, places])
 
   return (
     <div>
-      <ScreenHeader
-        title="Places"
-        description="Search-to-add is mocked as seeded restaurants for now."
+      <ScreenHeader title="Places" />
+      <SectionTabs
+        label="Filter places"
+        value={filter}
+        onValueChange={(value) => setFilter(value as PlaceFilter)}
+        options={filters.map((item) => ({ value: item.id, label: item.label }))}
       />
-      <FilterRow label="Filter places">
-        {filters.map((item) => (
-          <FilterChip
-            key={item.id}
-            active={filter === item.id}
-            onClick={() => setFilter(item.id)}
-          >
-            {item.label}
-          </FilterChip>
-        ))}
-      </FilterRow>
       {visible.length === 0 ? (
-        <EmptyState>Nothing matches this filter.</EmptyState>
+        <EmptyState>Nothing in {filters.find((item) => item.id === filter)?.label} yet.</EmptyState>
       ) : (
         <CardGroup>
           <RowList>
@@ -97,7 +80,7 @@ function PrototypePlacesIndex({ householdId }: { householdId: string }) {
                   to={placeDetailPath(householdId, place.id)}
                   leading={<Tile icon={place.isFavorite ? Heart : MapPin} tone="places" />}
                   title={place.name}
-                  subtitle={`${place.cuisine} · ${place.neighborhood}`}
+                  subtitle={[place.cuisine, place.neighborhood].filter(Boolean).join(' · ') || undefined}
                   meta={
                     <>
                       <Badge variant="secondary" className="rounded-full">
@@ -125,6 +108,30 @@ function PrototypePlacesIndex({ householdId }: { householdId: string }) {
           </RowList>
         </CardGroup>
       )}
+
+      <PlaceCreate
+        hits={hits.map((hit) => ({
+          id: hit.id,
+          title: hit.name,
+          subtitle: `${hit.cuisine} · ${hit.neighborhood}`,
+          neighborhood: hit.neighborhood,
+          cuisine: hit.cuisine,
+        }))}
+        onQueryChange={setQuery}
+        onCreate={(input) =>
+          toastResult(
+            createPlace(input.name, {
+              neighborhood: input.neighborhood,
+              cuisine: input.cuisine,
+              visitState: input.visitState,
+              isFavorite: input.isFavorite,
+              sharedNote: input.sharedNote,
+              tags: input.tags,
+              photoUrl: input.photo?.previewUrl,
+            }),
+          )
+        }
+      />
     </div>
   )
 }
@@ -132,12 +139,7 @@ function PrototypePlacesIndex({ householdId }: { householdId: string }) {
 export function PlaceDetailPage() {
   const { placeEntryId = '', householdId = '' } = useParams()
   if (usesFoundryData(householdId)) {
-    return (
-      <FoundryCatalogPending
-        title="Places"
-        body="Places are not in the consumer SDK yet. Provider search will stay in Foundry Functions, not the browser."
-      />
-    )
+    return <FoundryPlaceDetail householdId={householdId} placeEntryId={placeEntryId} />
   }
   return <PrototypePlaceDetail householdId={householdId} placeEntryId={placeEntryId} />
 }
@@ -149,7 +151,7 @@ function PrototypePlaceDetail({
   householdId: string
   placeEntryId: string
 }) {
-  const { places, placeReviews, members } = usePrototype()
+  const { places, placeReviews, members, togglePlaceFavorite } = usePrototype()
   const place = places.find((item) => item.id === placeEntryId)
   const reviews = place ? (placeReviews[place.id] ?? []) : []
 
@@ -157,56 +159,27 @@ function PrototypePlaceDetail({
     return <NotFoundState backTo={householdPath(householdId, 'places')} backLabel="Places" />
   }
 
-  const average = averageStars(reviews)
-  const spread = reviewSpread(reviews)
-
   return (
-    <div>
-      <BackLink to={householdPath(householdId, 'places')} label="Places" />
-      <ScreenHeader title={place.name} description={`${place.cuisine} · ${place.neighborhood}`} />
-
-      <HeroCard eyebrow={average !== null ? 'Our rating' : 'Status'}>
-        {average !== null ? (
-          <>
-            <Stat value={average.toFixed(1)} unit="of 5" />
-            <p className="mt-1.5 text-[0.9375rem] font-medium text-white/85">
-              {spread !== null && spread >= 3
-                ? `We are ${spread / 2} stars apart on this one.`
-                : 'We agree on this one.'}
-            </p>
-          </>
-        ) : (
-          <p className="text-lg font-semibold text-pretty">
-            {place.visitState === 'WANT_TO_GO'
-              ? 'We still want to go here.'
-              : 'We have been, but neither of us has reviewed it.'}
-          </p>
-        )}
-      </HeroCard>
-
-      <CardGroup label="Details">
-        <RowList>
-          <Row
-            title="Visit state"
-            trailing={
-              <span className="text-sm font-semibold">
-                {place.visitState === 'WANT_TO_GO' ? 'Want to go' : 'Been'}
-              </span>
-            }
-          />
-          <Row
-            title="Favorite"
-            trailing={<span className="text-sm font-semibold">{place.isFavorite ? 'Yes' : 'No'}</span>}
-          />
-          {place.sharedNote ? <Row title="Our note" subtitle={place.sharedNote} wrap /> : null}
-        </RowList>
-      </CardGroup>
-
-      <ReviewGroup
-        reviews={reviews}
-        members={members}
-        emptyMessage="Neither of us has reviewed this yet."
-      />
-    </div>
+    <PlaceDetailView
+      householdId={householdId}
+      name={place.name}
+      cuisine={place.cuisine}
+      neighborhood={place.neighborhood}
+      visitState={place.visitState}
+      isFavorite={place.isFavorite}
+      description={place.description}
+      address={place.address}
+      phoneNumber={place.phoneNumber}
+      websiteUrl={place.websiteUrl}
+      photoUrl={
+        place.photoUrl ?? `https://picsum.photos/seed/${encodeURIComponent(place.id)}/1200/900`
+      }
+      sharedNote={place.sharedNote}
+      reviews={reviews}
+      members={members}
+      average={averageStars(reviews)}
+      spread={reviewSpread(reviews)}
+      onToggleFavorite={() => togglePlaceFavorite(place.id)}
+    />
   )
 }

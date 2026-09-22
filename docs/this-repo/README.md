@@ -1,6 +1,6 @@
 # This repository: frontend and membership service
 
-**Last updated:** 2026-09-05
+**Last updated:** 2026-09-13
 
 This GitHub repo is **not** the Foundry / Ontology project. It contains:
 
@@ -12,11 +12,13 @@ This GitHub repo is **not** the Foundry / Ontology project. It contains:
 
 Product behavior and the Ontology model still live one level up, because the UI must match them:
 
+- [Implementation status](../implementation-status.md)
 - [Product decisions](../product-decisions.md)
 - [Ontology specification](../ontology-spec.md)
+- [Places, Watch, and Things scope](../places-watch-things-scope.md)
 - [Frontend and membership-service agent handoff](../frontend-and-membership-agent-handoff.md)
 
-Those three documents describe Foundry-backed production. This repo consumes `@jorby/sdk` from the browser app only. Seeded prototype data is allowed only on the `our-home` mock household. The membership service still does not use the consumer SDK.
+Those documents describe Foundry-backed production. This repo consumes `@jorby/sdk@0.14.0` from the browser app only. Seeded prototype data is allowed only on the `our-home` mock household. The membership service still does not use the consumer SDK.
 
 ## Docs in this folder
 

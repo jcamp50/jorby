@@ -2,9 +2,19 @@
 
 **Audience:** Agent or engineering team implementing the React frontend and trusted user/membership service in this GitHub repo  
 **Status:** Build contract  
-**Last updated:** 2026-09-05
+**Last updated:** 2026-09-13
 
-This repository implements the browser app and membership service only. Foundry Ontology is a separate backend. Local UI work currently uses mock data; see [docs/this-repo/](./this-repo/README.md).
+This repository implements the browser app and membership service only. Foundry Ontology is a separate backend. Seeded prototype data is allowed only on `/our-home/…`; live households use `@jorby/sdk`. See [docs/this-repo/](./this-repo/README.md).
+
+## Current implementation milestone — 2026-09-13
+
+- Consumer package: exact `@jorby/sdk@0.14.0`, with `@osdk/react`, `@osdk/client`, and `@osdk/api` exactly `2.67.0` and `@osdk/oauth` exactly `1.13.0`.
+- Deployed concrete scope: 15 objects, 31 links, and 48 consumer Actions across Household, Lists, Notes, Places, Watch, and Things.
+- Queries: `getJorbyWatchTonight` at `0.6.0`; `getMyMembership`, `searchJorbyPlaces`, `getJorbyPlaceDetails`, `searchJorbyMediaTitles`, and `getJorbyMediaTitleDetails` at `0.5.0`; Functions release `0.6.0`. Do not send `currentUserId` on consumer Actions. `getMyMembership` is still used to resolve the current member and may still 403.
+- Interfaces: `JorbyHouseholdScoped`, `JorbyContent`, and `JorbyMemberReaction` are deployed with 13/5/3 concrete implementations. Global polymorphic search is enabled at the Ontology/SDK layer.
+- Six old legacy List Action symbols were removed after their RIDs were repurposed into composite Places/Watch/Things Actions to stay within the 60-Action cap. Import only names present in `apps/web/src/osdk/resources.ts`.
+- Places/Watch provider adapters are deterministic `MOCK` only. Real credentials and Foundry egress remain pending.
+- See [Implementation status](./implementation-status.md) for exact generated exports and resource RIDs.
 
 ## 1. Mission
 
@@ -37,43 +47,28 @@ Finance mock UI is approved as a separate household app. Do not add bank connect
 
 Before writing code, read:
 
-1. `docs/product-decisions.md`
-2. `docs/ontology-spec.md`
-3. This handoff
+1. `docs/implementation-status.md`
+2. `docs/product-decisions.md`
+3. `docs/ontology-spec.md`
+4. `docs/places-watch-things-scope.md`
+5. This handoff
+6. `docs/this-repo/` for this GitHub codebase
 
 If code and documentation disagree, do not assume the code is correct. Follow the precedence in `docs/README.md`, record the discrepancy, and resolve it explicitly.
 
 ## 3. Current repository reality
 
-The current repository is a Foundry-generated React OSDK application using React, Vite, TypeScript, OAuth, and a generated SDK configuration.
+This GitHub repository already has the approved layout: `apps/web` (Vite React PWA) and `services/membership`. It consumes `@jorby/sdk@0.14.0` from the browser app only. Foundry remains a separate Ontology/Functions project.
 
 Important current-state observations:
 
-- `@osdk/react` and `@osdk/client` are already dependencies.
-- Blueprint dependencies are present from the template, but the approved design direction is Tailwind, accessible headless primitives, and shadcn components.
-- `foundry.config.json` currently targets Foundry static hosting.
+- `@osdk/react`, `@osdk/client`, `@osdk/api`, and `@osdk/oauth` are pinned to the exact 2.67.0 / 1.13.0 line.
+- The approved design direction is Tailwind, accessible headless primitives, and shadcn components.
 - The approved product decision is external static hosting for the production frontend.
-- The approved source layout is one GitHub monorepo containing the web app and membership service.
+- Seeded prototype catalog and Finance mock data are allowed only on the `our-home` household.
+- Membership administration is still manual because the enrollment does not support Client Credentials.
 
-Do not delete current hosting configuration or Blueprint dependencies as an unrelated cleanup. Establish the GitHub/external-hosting migration and remove unused dependencies in a dedicated change with a working replacement.
-
-Suggested eventual monorepo layout:
-
-```text
-jorby/
-├── apps/
-│   └── web/
-├── services/
-│   └── membership/
-├── packages/
-│   ├── ui/
-│   ├── contracts/
-│   └── config/
-├── docs/
-└── .github/workflows/
-```
-
-The living documentation in this repository must be preserved in the GitHub source of truth.
+The living documentation in this repository must stay the GitHub source of truth.
 
 ## 4. Non-negotiable architecture
 
@@ -92,9 +87,9 @@ Consumer user
   -> invitation records, Household access group, Membership objects
 
 OSDK frontend
-  -> Foundry provider Functions
-  -> mock adapter initially
-  -> Google Places or TMDB after credentials and egress approval
+  -> Foundry provider Functions 0.6.0
+  -> deterministic MOCK adapters (current deployed behavior)
+  -> Google Places or TMDB only after credentials and egress approval (pending)
 ```
 
 ### Trust boundaries
@@ -325,16 +320,18 @@ Admin-only, not called by ordinary browser UI:
 
 Provider access runs in Foundry server-side Functions, not in the browser or membership service.
 
-Initial functions:
+Deployed query Function contracts use parameter objects with these generated fields. `getJorbyWatchTonight` is imported at `0.6.0`; the other five queries remain `0.5.0`.
 
-- `searchPlaces(query, locationBias, pageToken?)`
-- `getPlaceDetails(provider, providerId)`
-- `searchMediaTitles(query, mediaType?, page?)`
-- `getMediaTitleDetails(provider, providerId, mediaType)`
-- `refreshCatalogPlace(catalogPlace)`
-- `refreshMediaTitle(mediaTitle)`
+- `searchJorbyPlaces({ provider, query, page?, pageSize? })`
+- `getJorbyPlaceDetails({ provider, placeId })`
+- `searchJorbyMediaTitles({ provider, query, page?, pageSize? })`
+- `getJorbyMediaTitleDetails({ provider, mediaTitleId })`
+- `getJorbyWatchTonight({ householdId })`
+- `getMyMembership({ householdId })`
 
-Start with mock adapters and stable provider-neutral DTOs.
+Canonical refresh, provider save, and manual reconciliation are governed edit Actions rather than directly callable browser query Functions. Import exact generated symbols only through `apps/web/src/osdk/resources.ts`.
+
+The deployed adapters are stable, deterministic `MOCK` implementations. Do not present them as real provider integration. Real credentials, egress approval, attribution, quota handling, and production failure behavior remain pending.
 
 Provider DTO rules:
 
@@ -502,9 +499,11 @@ Queries:
 
 Functions/Actions:
 
-- Search provider.
-- Save provider result.
-- Refresh provider snapshot.
+- Search the mock/provider adapter or create a manual Place.
+- Save a provider result into a canonical snapshot plus private Entry.
+- Reconcile a manual Entry to a provider record without replacing its ID or history.
+- Correct an invalid provider match when no Household duplicate results.
+- Refresh provider snapshot without overwriting Household fields or title overrides.
 - Set visit state/favorite.
 - Log/edit/archive Visit.
 - Create/edit/archive Dish.
@@ -522,13 +521,14 @@ Queries:
 
 Functions/Actions:
 
-- Search titles.
-- Save provider result.
-- Refresh metadata.
+- Search the mock/provider adapter or create a manual title.
+- Save a provider result into a canonical snapshot plus private Entry.
+- Reconcile or correct a provider match without replacing Entry history.
+- Refresh metadata without overwriting Household fields or title overrides.
 - Set status.
-- Set shared show progress.
+- Set shared show progress using positive season/episode values and known season bounds only.
 - Set/clear wants-to-watch.
-- Submit/update/archive Review.
+- Submit/update/archive Review only while the Entry is Watched or Dropped.
 
 Do not treat a missing reaction as a positive interest signal.
 
@@ -541,7 +541,8 @@ Queries:
 
 Actions:
 
-- Create/edit Thing.
+- Create/edit one physical or intended Thing unit.
+- Set or clear an optional exact minor-unit price and currency snapshot.
 - Assign/unassign.
 - Reserve/release.
 - Purchase transition with explicit outcome.
@@ -763,27 +764,26 @@ Do not build broad UI before these spikes pass.
 - Explicit Save and unsaved protection.
 - Record links.
 
-### Phase 4: Watch
+### Phase 4: Places frontend on deployed concrete resources
 
-- Mock title search, save, status, progress, reactions, and queue.
-- Replace mock with TMDB after approvals.
+- Build manual/MOCK place creation, provider-save/reconciliation flows, Visits, Dishes, Reviews, and filters against the generated `0.14.0` Actions.
+- Replace MOCK with Google Places only after credentials and egress approval.
+- Use the deployed shared interfaces only where polymorphic behavior is required; preserve concrete object types for domain-specific screens.
 
-### Phase 5: Places
+### Phase 5: Watch frontend on deployed concrete resources
 
-- Mock place search, save, Visits, Dishes, Reviews, and filters.
-- Replace mock with Google Places after approvals.
+- Build manual/MOCK title creation, provider-save/reconciliation flows, status, progress, reactions, and queue against the generated composite Actions.
+- Replace MOCK with TMDB only after credentials and egress approval.
 
-### Phase 6: Things
+### Phase 6: Things frontend on deployed concrete resources
 
-- Wish/Home/history lenses.
-- Assignment, recipient, reservation, and lifecycle transitions.
+- Build Wish/Home/history lenses, details, reservation, and lifecycle transitions with `createJorbyThing` and the three generated `manageJorbyThing*` Actions.
 
-### Phase 7: Home and global search
+### Phase 7: Home and global-search UI
 
-- Recent content.
-- We Should smart union.
-- Cross-section search.
-- Performance and accessibility pass.
+- Query the deployed `JorbyContent` interface for cross-section recent content and global polymorphic search.
+- Resolve interface results to concrete object types for domain-specific rendering and routing.
+- Build the We Should/global-search UI and complete performance/accessibility validation.
 
 ## 19. Pull-request checklist
 

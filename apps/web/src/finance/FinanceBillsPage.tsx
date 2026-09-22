@@ -5,7 +5,7 @@ import { CardGroup, Row, RowList } from '@/components/jorby/card-group'
 import { MemberChip } from '@/components/jorby/member-mark'
 import { EmptyState, ScreenHeader } from '@/components/jorby/screen'
 import { Tile } from '@/components/jorby/tile'
-import { FinanceViewBar, useFinanceView, viewLabel } from '@/finance/FinanceView'
+import { FinanceViewBar, useFinanceView } from '@/finance/FinanceView'
 import { LiveFinancePending } from '@/finance/LiveFinancePending'
 import { shortDate } from '@/finance/format'
 import { HOUSEHOLD_VIEW, ownedForView } from '@/finance/model'
@@ -31,10 +31,7 @@ function PrototypeFinanceBills() {
 
   return (
     <div>
-      <ScreenHeader
-        title="Bills"
-        description={`${viewLabel(view, members)} subscriptions and recurring charges.`}
-      />
+      <ScreenHeader title="Bills" />
       <FinanceViewBar />
       {bills.length === 0 ? (
         <EmptyState>No bills in this view.</EmptyState>
