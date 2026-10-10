@@ -4,36 +4,36 @@ The generated Ontology SDK is consumed as `@jorby/sdk`. Generated source files a
 
 ## Current browser SDK
 
-The deployed consumer package is exactly `@jorby/sdk@0.14.0`. Its generated resource namespaces contain:
+The deployed consumer package is resolved `@jorby/sdk@0.20.0`. Its generated resource namespaces contain:
 
-- 15 object types spanning Household, Lists, Notes, Places, Watch, and Things.
-- 31 generated links on those object types.
-- 48 consumer Actions.
-- 6 query Functions from the published `Jorby Functions` release `0.6.0`. `getJorbyWatchTonight` is imported at `0.6.0`; `getMyMembership` and the four Places/Watch provider queries remain `0.5.0`.
+- 16 object types spanning Household, Lists, Notes, Tags, Places, Watch, and Things.
+- 36 imported links, including five Tag links. List Item → Thing is not a typed traversal in this SDK.
+- 45 consumer Actions.
+- 6 query Functions. `getJorbyWatchTonight` is `0.6.0`; the other five remain `0.5.0`. The latest edit Function release is `0.6.1`.
 - 3 interfaces:
-  - `JorbyHouseholdScoped`, implemented by 13 private object types.
-  - `JorbyContent`, implemented by 5 top-level content object types.
+  - `JorbyHouseholdScoped`, implemented by 14 private object types.
+  - `JorbyContent`, implemented by 5 top-level content object types, now including `tagNames`.
   - `JorbyMemberReaction`, implemented by 3 review/reaction object types.
 
-`resources.ts` exports exactly the union of the generated `$Objects`, `$Actions`, `$Queries`, and `$Interfaces` namespaces: 72 resource exports. It deliberately excludes the namespace objects themselves (`$Actions`, `$Objects`, `$Queries`, and `$Interfaces`) plus `$osdkMetadata`, `$branch`, and `$ontologyRid`. `resources.test.ts` mechanically compares the boundary keys with all four generated namespaces so SDK drift fails in CI.
+`resources.ts` exports exactly the union of the generated `$Objects`, `$Actions`, `$Queries`, and `$Interfaces` namespaces: 70 resource exports. It deliberately excludes the namespace objects themselves plus `$osdkMetadata`, `$branch`, and `$ontologyRid`. `resources.test.ts` compares the boundary keys so SDK drift fails in CI.
 
-The six legacy List symbols `archiveJorbySharedList`, `completeJorbyListItem`, `reopenJorbyListItem`, `restoreJorbySharedList`, `updateJorbyListItem`, and `updateJorbySharedList` are no longer generated. Their six Action RIDs were repurposed for composite Places, Watch, and Things Actions to stay within the enrollment's 60-Action cap.
+Do not import the removed legacy List symbols or the Plan B symbols `archiveJorbyListItem`, `assignJorbyListItem`, `clearJorbyListItemAssignment`, `restoreJorbyListItem`, `restoreJorbySharedNote`, and `archiveJorbySharedNote`. Note archive is `setJorbySharedNoteArchived`.
 
-Do not send `currentUserId` on any Action. Identity is supplied by trusted Action context. Browser OAuth stays on `api:use-ontologies-read` and `api:use-ontologies-write`. `getMyMembership` remains identity-dependent; this app still calls it to resolve the current member and it may still 403.
+Do not send `currentUserId` on any Action. Browser OAuth stays on `api:use-ontologies-read` and `api:use-ontologies-write`. `getMyMembership` remains identity-dependent; this app still calls it to resolve the current member and it may still 403.
 
-The compatible runtime line remains exact:
+The compatible runtime line is exact:
 
 ```text
-@jorby/sdk   0.14.0
-@osdk/react  2.67.0
-@osdk/client 2.67.0
-@osdk/api    2.67.0
+@jorby/sdk   0.20.0
+@osdk/react  2.73.0
+@osdk/client 2.73.0
+@osdk/api    2.73.0
 @osdk/oauth  1.13.0
 ```
 
 ## Provider boundary
 
-Places and Watch provider query contracts are deployed, but their adapters are deterministic `MOCK` implementations only. Real provider credentials and Foundry egress approval remain pending. Never put provider secrets in browser configuration or call providers directly from React.
+Live place search uses `GOOGLE`. Live watch search uses `TMDB`. `MOCK` stays on deterministic tests. Never put provider secrets in browser configuration or call Google or TMDB directly from React.
 
 ## Updating the SDK
 

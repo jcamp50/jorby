@@ -4,7 +4,7 @@
 **Accepted:** 2026-09-07
 **Deployment status updated:** 2026-09-13
 **Build order used:** Places, Watch, Things
-**Current consumer SDK:** `@jorby/sdk@0.14.0`
+**Current consumer SDK:** superseded by resolved `@jorby/sdk@0.20.0`. Counts below that still say `0.14.0` are historical. Use `implementation-status.md` for the live 16/45/6/3, 70-export contract, including Tags, photos, and Plan B.
 
 This document records the accepted design and its implementation outcome. `product-decisions.md` remains authoritative for behavior, `ontology-spec.md` for the logical model, and `implementation-status.md` for exact deployed RIDs.
 

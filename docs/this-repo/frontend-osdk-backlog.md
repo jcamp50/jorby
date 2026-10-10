@@ -1,9 +1,9 @@
 # Frontend catalog and action backlog
 
 **Status:** Living  
-**Last updated:** 2026-09-18
+**Last updated:** 2026-09-30
 
-Mock seed data is allowed only on `/our-home/…`. Live Foundry households use `@jorby/sdk@0.14.0`.
+Mock seed data is allowed only on `/our-home/…`. Live Foundry households use `@jorby/sdk@0.20.0`.
 
 ## Live now
 
@@ -17,22 +17,27 @@ Mock seed data is allowed only on `/our-home/…`. Live Foundry households use `
 | Things | Concrete `JorbyThing` reads/writes with composite lifecycle/detail/reservation Actions |
 | Home / search | Derived activity feed plus polymorphic `JorbyContent` search |
 
-Do not call `provisionJorbyHousehold` or invoke edit Functions directly. Use the governed Actions. Provider search is deterministic `MOCK` only — label it as such in the UI.
+Do not call `provisionJorbyHousehold` or invoke edit Functions directly. Use the governed Actions. Live place search uses `GOOGLE` and live watch search uses `TMDB`.
 
-## Still to deepen from 0.14.0
+## Still to build against 0.20.0
 
-| Action / query | UI |
+| Action / resource | UI |
 | --- | --- |
+| `manageJorbyTag` | Find/create, rename, archive |
+| `manageJorbyTagLinks` | Attach/detach on the five content types |
+| `JorbyContent.tagNames` | Search filter is live; section screens still do not filter by tag |
+| `thingId` on List Item Actions | Optional Thing picker; no typed `linkedThing` traversal |
+| `SET_PHOTO` / `CLEAR_PHOTO` / `photo` / `clearPhoto` | Upload, replace, and clear on Thing, Place Entry, and Visit |
 | `saveJorbyListItem` | Rename / reorder |
 | `setJorbyListItemAssignee` | Member picker sheet |
 | `setJorbyListItemArchived` | Item overflow |
 | `duplicateJorbySharedList` | Overflow on list detail |
-| `restoreJorbySharedNote` | Archived-notes view |
+| `setJorbySharedNoteArchived` | Restore path; archive already calls this Action with `isArchived: true` |
 | Visit dishes / participants | Full visit editor |
-| Place / Watch reconciliation | Attach a MOCK provider record to a manual entry |
+| Place / Watch reconciliation | Attach a provider record to a manual entry |
 
-The six legacy List symbols no longer exist. New code must not import them.
+Do not import the deleted Plan B symbols. Do not send `MOCK` from production place or watch search.
 
 ## Still waiting outside this SDK
 
-Invite / first-household stay on the confidential membership service, which remains blocked on Client Credentials. Real Google Places and TMDB adapters stay pending credentials and Foundry egress.
+Invite / first-household stay on the confidential membership service, which remains blocked on Client Credentials. Real Google Places and TMDB adapters are implemented in Foundry; production credentials, quota, attribution, and smoke tests are not recorded.

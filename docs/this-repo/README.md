@@ -18,7 +18,7 @@ Product behavior and the Ontology model still live one level up, because the UI 
 - [Places, Watch, and Things scope](../places-watch-things-scope.md)
 - [Frontend and membership-service agent handoff](../frontend-and-membership-agent-handoff.md)
 
-Those documents describe Foundry-backed production. This repo consumes `@jorby/sdk@0.14.0` from the browser app only. Seeded prototype data is allowed only on the `our-home` mock household. The membership service still does not use the consumer SDK.
+Those documents describe Foundry-backed production. This repo consumes `@jorby/sdk@0.20.0` from the browser app only. Seeded prototype data is allowed only on the `our-home` mock household. The membership service still does not use the consumer SDK.
 
 ## Docs in this folder
 

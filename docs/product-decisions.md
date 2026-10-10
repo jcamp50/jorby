@@ -1,7 +1,7 @@
 # Jorby product decisions
 
 **Status:** Living decision register  
-**Last updated:** 2026-09-13  
+**Last updated:** 2026-09-30  
 **Product:** Jorby v1
 
 ## 1. Product statement
@@ -10,19 +10,22 @@ Jorby is a private shared-household application. Its first release is a shared l
 
 The interface is optimized for couples, but the domain model supports any household size.
 
-## Current implementation outcome — 2026-09-13
+## Current implementation outcome — 2026-09-30
 
 See [Implementation status](./implementation-status.md) for the exact deployed-resource and RID record.
 
 - Public OAuth/PKCE and localhost CORS work for the external consumer frontend.
 - One live Household, `Jordan & Abby`, and Jordan's active Membership are provisioned.
-- Household, Lists, Notes, Places, Watch, and Things concrete Ontology types, links, and governed Actions are deployed.
-- `@jorby/sdk@0.14.0` is the exact generated consumer package: 15 objects, 31 links, 48 consumer Actions, 6 query Functions, and 3 interfaces; the Functions release is `0.6.0`. `getJorbyWatchTonight` is `0.6.0`; `getMyMembership` and the four Places/Watch provider queries remain `0.5.0`. Function-backed edits take identity from trusted Action context; do not send `currentUserId` from the browser.
-- Six obsolete legacy List Action RIDs were repurposed into composite Places/Watch/Things Actions to remain within the enrollment's 60-Action cap. Their six old generated symbols are no longer available.
-- Shared Notes support explicit Save and a five-minute Membership-owned edit lease.
-- Places and Watch provider adapters are deterministic `MOCK` implementations only. Real provider credentials and Foundry egress remain pending.
-- The enrollment does not support OAuth Client Credentials/Application permissions. Automated invite, join, leave, and group administration are deferred; membership is manually administered through a Household group.
-- `JorbyHouseholdScoped`, `JorbyContent`, and `JorbyMemberReaction` are deployed in the Ontology and generated SDK with 13/5/3 concrete implementations. Global polymorphic search is enabled at the Ontology/SDK layer.
+- Household, Lists, Notes, Tags, Places, Watch, and Things concrete Ontology types, links, and governed Actions are deployed.
+- Resolved `@jorby/sdk@0.20.0` is the current consumer package: 16 objects, 45 consumer Actions, 6 query Functions, 3 interfaces, and 70 top-level exports. Generated object definitions expose 36 imported links. The runtime is `@osdk/react`, `@osdk/client`, and `@osdk/api` `2.73.0` plus `@osdk/oauth` `1.13.0`. The Ontology has 56 Actions; 11 are outside the browser SDK.
+- The latest `Jorby Functions` edit release is `0.6.1`. `getJorbyWatchTonight` is `0.6.0`; the other five queries are `0.5.0`. Browser code never supplies `currentUserId`.
+- Plan B deleted five obsolete Action types and repurposed `archiveJorbySharedNote` as `setJorbySharedNoteArchived`.
+- `JorbyTag` and five links are the household vocabulary across the five `JorbyContent` implementations. `tagNames` is a denormalized projection.
+- Shared Notes support explicit Save and a five-minute Membership-owned edit lease. Note-local `tags` remain separate from shared Tags.
+- Provider Functions implement `MOCK`, `GOOGLE`, and `TMDB`. Live household search uses `GOOGLE` for places and `TMDB` for watch. `MOCK` stays on deterministic tests.
+- Optional `photo` Attachments exist on Thing, Place Entry, and Visit. The upload UI is not built.
+- The enrollment does not support OAuth Client Credentials. Membership stays manually administered.
+- Interfaces are deployed with 14/5/3 implementations. This app queries `JorbyContent` for Home and search, and the search screen can narrow by content type and `tagNames`.
 - This GitHub frontend still hosts the approved Finance mock app mode (`D-MONEY-*`). Foundry has no money objects.
 
 ## 2. Product principles
@@ -123,9 +126,18 @@ Home catalog Home is a thin orientation layer, not a separate data-entry product
 | ID           | Decision                                                                     |
 | ------------ | ---------------------------------------------------------------------------- |
 | `D-NOTE-001` | Notes use lightweight Markdown rather than block editing.                    |
-| `D-NOTE-002` | Notes use free-form multi-value tags, not folders.                           |
+| `D-NOTE-002` | Notes retain free-form `tags`, may link shared Tags, and use no folders.     |
 | `D-NOTE-003` | A Note can link to multiple Lists, Place Entries, Watch Entries, and Things. |
 | `D-NOTE-004` | v1 has no comments, version-history UI, or real-time co-editing.             |
+
+### 4.5a Tags
+
+| ID          | Decision                                                                                                                                            |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `D-TAG-001` | Each Household owns one case-insensitive Tag vocabulary; normalized names are unique within that Household.                                         |
+| `D-TAG-002` | Tags attach through governed links to Shared Lists, Shared Notes, Things, Place Entries, and Watch Entries—the five `JorbyContent` implementations. |
+| `D-TAG-003` | Tag links are authoritative. `JorbyContent.tagNames` is a denormalized normalized-name projection maintained for display, filtering, and search.    |
+| `D-TAG-004` | Tags and Tag links are managed only through the composite Tag Actions; archived Tags cannot be newly attached.                                      |
 
 ### 4.6 Places
 
@@ -141,7 +153,7 @@ Home catalog Home is a thin orientation layer, not a separate data-entry product
 | `D-PLACE-008` | Each member may maintain one overall rating/review for a Place and one overall rating/review for a Dish.              |
 | `D-PLACE-009` | Dish reviews describe the reusable Dish overall, not an individual Visit.                                             |
 | `D-PLACE-010` | Ratings use 0.5 to 5 stars in half-star increments.                                                                   |
-| `D-PLACE-011` | No uploaded visit/place photos in v1. Provider image metadata may be shown when permitted.                            |
+| `D-PLACE-011` | v1 permits one optional household `photo` Attachment on each Place Entry and Visit. Galleries and household media on canonical Catalog Places stay excluded. Provider image metadata remains separate. |
 | `D-PLACE-012` | A member may create a manual Place when provider search is unavailable or unsuitable.                                 |
 | `D-PLACE-013` | Manual Places remain private Household entries and never become shared canonical provider records.                    |
 | `D-PLACE-014` | A manual Place may later be reconciled to a provider record without replacing its Entry ID or history.                |
@@ -180,7 +192,7 @@ Home catalog Home is a thin orientation layer, not a separate data-entry product
 | `D-THING-008` | Gift reservations are visible to the household; surprise-gift privacy is not part of v1.            |
 | `D-THING-009` | Only the reserving member normally clears a reservation.                                            |
 | `D-THING-010` | Removing the reserving member automatically releases the reservation.                               |
-| `D-THING-011` | No uploaded Thing photos in v1; an optional external image URL is allowed.                          |
+| `D-THING-011` | v1 permits one optional household `photo` Attachment on a Thing. `SET_PHOTO` replaces it, `CLEAR_PHOTO` removes it, and `imageUrl` remains a separate fallback. Galleries stay excluded. |
 | `D-THING-012` | One Thing represents one physical or intended unit; identical units are separate Thing objects.     |
 
 ### 4.9 Home and search
@@ -203,6 +215,8 @@ Home catalog Home is a thin orientation layer, not a separate data-entry product
 | `D-ARCH-003` | Add non-searchable `JorbyHouseholdScoped` and searchable `JorbyContent` with Places; add `JorbyMemberReaction` with reviews. |
 | `D-ARCH-004` | New Ontology API names retain the `Jorby` prefix used by every deployed object type.                                         |
 | `D-ARCH-005` | The consumer SDK and OSDK runtime packages are pinned exactly and regenerated after each Ontology surface change.            |
+| `D-ARCH-006` | The Ontology may contain backend-only Actions that are absent from the consumer SDK; report Ontology and consumer Action counts separately. |
+| `D-ARCH-007` | Browser mutations never accept a caller-supplied `currentUserId`; Action bindings inject trusted execution identity.          |
 
 ### 4.11 Frontend experience
 
@@ -232,7 +246,7 @@ Home catalog Home is a thin orientation layer, not a separate data-entry product
 - Public profiles or social sharing.
 - Friends, followers, chat, or comments.
 - Full Notion-style blocks.
-- Uploaded media and media vaults.
+- Uploaded media, galleries, and media vaults, except one optional `photo` Attachment on each Thing, Place Entry, and Visit.
 - Offline writes.
 - Real-time cursors or collaborative text editing.
 - List-template marketplace.
@@ -243,7 +257,7 @@ Home catalog Home is a thin orientation layer, not a separate data-entry product
 ## 6. Decisions deferred beyond v1
 
 - Private surprise-gift exception.
-- Uploaded photos and a reusable Attachment model.
+- Photo galleries, reusable media libraries, and uploaded media on objects other than Thing, Place Entry, and Visit.
 - Recurring grocery lists.
 - Map-first Places experience.
 - Notifications.
@@ -262,13 +276,15 @@ These are validation tasks, not reopened product decisions:
 3. **Consumer user group propagation:** Verified manually. Group membership in `Jorby Household` grants access to the live Household and Membership objects.
 4. **Group-property object security:** Verified. Object policies using `intersects(user.groupIds(), object.accessGroupId)` correctly govern reads.
 5. **Ontology backend:** Verified. Using Object Storage v2 with project-based permissions.
-6. **Google Places and TMDB adapters:** Partially complete. Provider-neutral contracts and deterministic `MOCK` adapters are deployed; real credentials and Foundry egress approval remain pending.
+6. **Google Places and TMDB adapters:** Source imports, egress, and real adapters are in production. This app uses `GOOGLE` for places and `TMDB` for watch. `MOCK` remains for deterministic tests.
 7. **Hosting, redirect URLs, and CORS:** Verified for local development. External origin, redirect URL, and CORS allowlist function at `http://localhost:8080`.
 8. **GitHub monorepo workflow:** Active. This repository is the public frontend and membership-service source. Foundry provides Ontology, Functions, and SDKs.
-9. **Approved OSDK imports:** Complete for `0.14.0`. Consumer SDK contains 15 object types, 31 links, 48 consumer Actions, 6 query Functions, and 3 interfaces with 13/5/3 concrete implementations. It excludes service-only provisioning.
-10. **OSDK package compatibility:** Complete. Exactly pinned to `@jorby/sdk@0.14.0`, `@osdk/react@2.67.0`, `@osdk/client@2.67.0`, `@osdk/api@2.67.0`, and `@osdk/oauth@1.13.0`.
-11. **Interfaces/global polymorphic search:** Complete at the Ontology/SDK layer. `JorbyContent` supports polymorphic queries.
-12. **Action capacity:** Complete for the current surface. Six legacy List Action RIDs were repurposed into composite domain Actions to remain within the 60-Action cap.
+9. **Approved OSDK imports:** Complete for resolved `0.20.0`. Consumer SDK contains 16 object types, 45 consumer Actions, 6 query Functions, and 3 interfaces with 14/5/3 implementations — 70 top-level exports and 36 imported links, including five Tag links.
+10. **OSDK package compatibility:** Complete. Pinned to `@jorby/sdk@0.20.0`, `@osdk/react@2.73.0`, `@osdk/client@2.73.0`, `@osdk/api@2.73.0`, and `@osdk/oauth@1.13.0`.
+11. **Action identity:** Complete for Actions. The browser does not supply `currentUserId`. `getMyMembership@0.5.0` remains the sole identity-dependent direct query; this app still calls it and it may 403.
+12. **Interfaces/global polymorphic search:** Complete at the Ontology/SDK layer. `JorbyContent` includes `tagNames`. Search can filter by content type and selected tags. Tag create/rename/attach is still not in the UI.
+13. **Action capacity:** The Ontology has 56 Actions and the consumer boundary has 45. Plan B deleted five obsolete Action types and repurposed `archiveJorbySharedNote` as `setJorbySharedNoteArchived`.
+14. **Photo exception:** Optional `photo` Attachments are deployed on Thing, Place Entry, and Visit. Frontend upload/replace/clear and HEIC conversion are not built.
 
 ## 8. Decision-change template
 

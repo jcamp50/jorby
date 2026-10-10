@@ -2,18 +2,20 @@
 
 **Audience:** Agent or engineering team implementing the React frontend and trusted user/membership service in this GitHub repo  
 **Status:** Build contract  
-**Last updated:** 2026-09-13
+**Last updated:** 2026-09-30
 
 This repository implements the browser app and membership service only. Foundry Ontology is a separate backend. Seeded prototype data is allowed only on `/our-home/…`; live households use `@jorby/sdk`. See [docs/this-repo/](./this-repo/README.md).
 
-## Current implementation milestone — 2026-09-13
+## Current implementation milestone — 2026-09-30
 
-- Consumer package: exact `@jorby/sdk@0.14.0`, with `@osdk/react`, `@osdk/client`, and `@osdk/api` exactly `2.67.0` and `@osdk/oauth` exactly `1.13.0`.
-- Deployed concrete scope: 15 objects, 31 links, and 48 consumer Actions across Household, Lists, Notes, Places, Watch, and Things.
-- Queries: `getJorbyWatchTonight` at `0.6.0`; `getMyMembership`, `searchJorbyPlaces`, `getJorbyPlaceDetails`, `searchJorbyMediaTitles`, and `getJorbyMediaTitleDetails` at `0.5.0`; Functions release `0.6.0`. Do not send `currentUserId` on consumer Actions. `getMyMembership` is still used to resolve the current member and may still 403.
-- Interfaces: `JorbyHouseholdScoped`, `JorbyContent`, and `JorbyMemberReaction` are deployed with 13/5/3 concrete implementations. Global polymorphic search is enabled at the Ontology/SDK layer.
-- Six old legacy List Action symbols were removed after their RIDs were repurposed into composite Places/Watch/Things Actions to stay within the 60-Action cap. Import only names present in `apps/web/src/osdk/resources.ts`.
-- Places/Watch provider adapters are deterministic `MOCK` only. Real credentials and Foundry egress remain pending.
+- Consumer package: resolved `@jorby/sdk@0.20.0`, with `@osdk/react`, `@osdk/client`, and `@osdk/api` exactly `2.73.0` and `@osdk/oauth` exactly `1.13.0`.
+- Deployed consumer boundary: 16 objects, 45 Actions, 6 queries, 3 interfaces, and 70 top-level resources. Generated object definitions expose 36 imported links, including five Tag links. The Ontology has 56 Actions.
+- Latest edit Function release: `0.6.1`. `getJorbyWatchTonight` is `0.6.0`; the other five queries remain `0.5.0`. Do not send `currentUserId`. This app still calls `getMyMembership` to resolve the current member, and that query may still 403.
+- `JorbyContent` has five implementations and now exposes `tagNames`. This app queries it for Home and search, and search can filter by content type and selected tags.
+- Plan B deleted five obsolete Action types and repurposed `archiveJorbySharedNote` as `setJorbySharedNoteArchived`. Import only names present in `apps/web/src/osdk/resources.ts`.
+- `JorbyTag`, `manageJorbyTag`, and `manageJorbyTagLinks` are deployed. The List Item → Thing link is not typed traversal in SDK `0.20.0`; use `thingId` on the List Item Actions.
+- Optional `photo` Attachments exist on Thing, Place Entry, and Visit. The upload/replace/clear UI is not built. HEIC/HEIF must be converted in the frontend or the Action fails closed.
+- Live place search sends `provider = "GOOGLE"`. Live watch search sends `provider = "TMDB"`. `MOCK` is for deterministic tests only. Do not label those live results as MOCK.
 - See [Implementation status](./implementation-status.md) for exact generated exports and resource RIDs.
 
 ## 1. Mission
@@ -58,11 +60,11 @@ If code and documentation disagree, do not assume the code is correct. Follow th
 
 ## 3. Current repository reality
 
-This GitHub repository already has the approved layout: `apps/web` (Vite React PWA) and `services/membership`. It consumes `@jorby/sdk@0.14.0` from the browser app only. Foundry remains a separate Ontology/Functions project.
+This GitHub repository already has the approved layout: `apps/web` (Vite React PWA) and `services/membership`. It consumes `@jorby/sdk@0.20.0` from the browser app only. Foundry remains a separate Ontology/Functions project.
 
 Important current-state observations:
 
-- `@osdk/react`, `@osdk/client`, `@osdk/api`, and `@osdk/oauth` are pinned to the exact 2.67.0 / 1.13.0 line.
+- `@osdk/react`, `@osdk/client`, and `@osdk/api` are pinned to `2.73.0`. `@osdk/oauth` stays at `1.13.0`.
 - The approved design direction is Tailwind, accessible headless primitives, and shadcn components.
 - The approved product decision is external static hosting for the production frontend.
 - Seeded prototype catalog and Finance mock data are allowed only on the `our-home` household.
@@ -331,7 +333,7 @@ Deployed query Function contracts use parameter objects with these generated fie
 
 Canonical refresh, provider save, and manual reconciliation are governed edit Actions rather than directly callable browser query Functions. Import exact generated symbols only through `apps/web/src/osdk/resources.ts`.
 
-The deployed adapters are stable, deterministic `MOCK` implementations. Do not present them as real provider integration. Real credentials, egress approval, attribution, quota handling, and production failure behavior remain pending.
+Production place search uses `GOOGLE`. Production watch search uses `TMDB`. `MOCK` remains for deterministic tests. Do not call Google or TMDB from the browser, and do not put provider credentials in `VITE_*` variables.
 
 Provider DTO rules:
 
@@ -766,7 +768,7 @@ Do not build broad UI before these spikes pass.
 
 ### Phase 4: Places frontend on deployed concrete resources
 
-- Build manual/MOCK place creation, provider-save/reconciliation flows, Visits, Dishes, Reviews, and filters against the generated `0.14.0` Actions.
+- Build manual/MOCK place creation, provider-save/reconciliation flows, Visits, Dishes, Reviews, and filters against the generated `0.20.0` Actions.
 - Replace MOCK with Google Places only after credentials and egress approval.
 - Use the deployed shared interfaces only where polymorphic behavior is required; preserve concrete object types for domain-specific screens.
 

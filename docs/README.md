@@ -1,12 +1,12 @@
 # Jorby living specifications
 
 **Status:** Living documentation  
-**Last updated:** 2026-09-12  
+**Last updated:** 2026-09-30  
 **Applies to:** Jorby v1 shared-household catalog
 
 This directory is the product and technical source of truth for Jorby. Update these documents in the same pull request as any implementation change that alters behavior, schema, security, or scope.
 
-Current deployed baseline: exact `@jorby/sdk@0.14.0`, 15 concrete objects, 31 links, 48 consumer Actions, 6 query Functions from Functions release `0.6.0` (`getJorbyWatchTonight` at `0.6.0`; the other five queries remain `0.5.0`), and 3 interfaces with 13/5/3 concrete implementations. Function-backed edits take the submitting user from trusted Action context; do not send `currentUserId` from the browser. Global polymorphic search through `JorbyContent` is enabled at the Ontology/SDK layer. Provider adapters remain deterministic `MOCK` pending real credentials and Foundry egress.
+Current deployed baseline: resolved `@jorby/sdk@0.20.0` with `@osdk/react`, `@osdk/client`, and `@osdk/api` `2.73.0` plus `@osdk/oauth` `1.13.0`. The consumer boundary is 16 objects, 45 Actions, 6 queries, 3 interfaces (14/5/3), 36 imported links, and 70 top-level exports. The Ontology has 56 Actions. Edit Functions are at `0.6.1`. Do not send `currentUserId` from the browser. Tags, optional photos, and List Item `thingId` are deployed. This app's Tag, photo, and Thing-link UI is not built yet. Live place search uses `GOOGLE` and live watch search uses `TMDB`. `MOCK` stays on deterministic tests.
 
 ## What this GitHub repo is
 

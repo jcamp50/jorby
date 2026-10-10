@@ -36,7 +36,7 @@ import { AppErrorCode } from '@/lib/errors'
 import { householdPath, watchDetailPath } from '@/lib/routes'
 import { watchStatusLabel } from '@/lib/watch-display'
 import { memberFromMembership } from '@/osdk/member'
-import { watchProviderOperation, watchReactionOperation } from '@/osdk/operations'
+import { mediaProvider, watchProviderOperation, watchReactionOperation } from '@/osdk/operations'
 import { mediaDetailsFromSource, mediaHitsFromQuery, mergeMediaDetails } from '@/osdk/provider-hits'
 import { useMyMembership } from '@/osdk/useMyMembership'
 import { toast } from 'sonner'
@@ -75,7 +75,7 @@ export function FoundryWatchIndex({ householdId }: { householdId: string }) {
   const [search, setSearch] = useState('')
   const term = useDebouncedValue(search.trim(), 300)
   const titles = useOsdkFunction(searchJorbyMediaTitles, {
-    params: { provider: 'MOCK', query: term, page: 1, pageSize: 8 },
+    params: { provider: mediaProvider, query: term, page: 1, pageSize: 8 },
     enabled: term.length >= 2,
   })
   const entries = data ?? []
@@ -96,7 +96,7 @@ export function FoundryWatchIndex({ householdId }: { householdId: string }) {
         await saveProvider.applyAction({
           operation: watchProviderOperation.saveProvider,
           householdId: household.householdId,
-          provider: 'MOCK',
+          provider: mediaProvider,
           providerMediaTitleId: input.providerId,
         })
       } else {
@@ -227,9 +227,14 @@ export function FoundryWatchDetail({
   const archiveEntry = useOsdkAction(setJorbyWatchEntryArchived)
   const mediaTitleId = typeof entry?.mediaTitleId === 'string' ? entry.mediaTitleId : undefined
   const titleRecord = useOsdkObject(JorbyMediaTitle, mediaTitleId ?? '', Boolean(mediaTitleId))
+  const titleProvider = titleRecord.object?.primaryProvider
+  const titleProviderId = titleRecord.object?.primaryProviderId
   const details = useOsdkFunction(getJorbyMediaTitleDetails, {
-    params: { provider: 'MOCK', mediaTitleId: mediaTitleId ?? '' },
-    enabled: Boolean(mediaTitleId),
+    params: {
+      provider: titleProvider ?? mediaProvider,
+      mediaTitleId: titleProviderId ?? '',
+    },
+    enabled: Boolean(titleProvider && titleProviderId),
   })
   const [rating, setRating] = useState('8')
   const rows = reactions.data ?? []

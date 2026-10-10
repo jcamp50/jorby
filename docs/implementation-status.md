@@ -1,25 +1,25 @@
 # Jorby implementation status
 
 **Status:** Living implementation record
-**Last updated:** 2026-09-13
-**Current consumer SDK:** `@jorby/sdk@0.14.0`
-**Current Functions release:** `0.6.0`
+**Last updated:** 2026-09-30
+**Current consumer SDK:** resolved `@jorby/sdk@0.20.0`
+**Current Functions edit release:** `0.6.1`
 
 This document records deployed truth. Product intent remains in `product-decisions.md`; the complete logical model remains in `ontology-spec.md`. Ontology, Actions, Functions, and object security are implemented in Foundry, not in this GitHub repository.
 
 ## Executive summary
 
-The Household, Lists, Notes, Places, Watch, and Things concrete Ontology slices and governed Actions are deployed. The exact generated consumer package is `@jorby/sdk@0.14.0`: **15 objects, 31 links, 48 consumer Actions, 6 query Functions, and 3 interfaces**. The underlying `Jorby Functions` release is `0.6.0`. Function-backed edits take the submitting user from trusted Action context (`currentUserId` / `current_user_id`) and must not receive it from the browser. Public OAuth/PKCE and local CORS work with the external consumer PWA.
+The Household, Lists, Notes, Tags, Places, Watch, and Things concrete Ontology slices and governed Actions are deployed. The resolved generated consumer package is `@jorby/sdk@0.20.0`: **16 objects, 45 consumer Actions, 6 query Functions, 3 interfaces, and exactly 70 top-level boundary resources**. Generated object definitions expose 36 imported links, including all five Tag links. The exact runtime is `@osdk/react`, `@osdk/client`, and `@osdk/api` `2.73.0` plus `@osdk/oauth` `1.13.0`. The Ontology contains **56 Actions total**; the consumer SDK imports 45. The latest published edit Function release is `0.6.1`. Every consumer Action derives trusted actor identity from Action context. The browser never supplies `currentUserId`. Public OAuth/PKCE and local CORS work with the external consumer PWA.
 
-`JorbyHouseholdScoped`, `JorbyContent`, and `JorbyMemberReaction` are deployed with 13/5/3 concrete implementations. Global polymorphic search through `JorbyContent` is enabled at the Ontology/SDK layer. Places and Watch provider adapters are deterministic `MOCK` implementations only; real credentials and Foundry egress approval remain pending.
+`JorbyHouseholdScoped`, `JorbyContent`, and `JorbyMemberReaction` are deployed with 14/5/3 concrete implementations. `JorbyContent` exposes denormalized `tagNames`; Tag links are authoritative. `JorbyTag`, five Tag links, `manageJorbyTag`, and `manageJorbyTagLinks` are deployed. The List Item → Thing link is deployed in the Ontology but is not generated as typed traversal in SDK `0.20.0`. Provider Functions import `GooglePlaces`, `Tmdb`, and `TmdbImage` egress and implement production `GOOGLE` and `TMDB` adapters alongside `MOCK`. The narrow media exception is optional `photo` on Thing, Place Entry, and Visit.
 
 The enrollment still does not support OAuth Client Credentials/Application permissions. Household membership is manually administered through one internal Foundry group per Household. Automated invite, join, leave, and group-management workflows remain blocked or require a future security-model redesign.
 
 ## This GitHub frontend
 
-This repository consumes the consumer SDK from `apps/web` only. `apps/web/src/osdk/resources.ts` is the browser import boundary and must export exactly the union of generated `$Objects`, `$Actions`, `$Queries`, and `$Interfaces` (72 resource exports). Infrastructure namespace objects and metadata (`$Objects`, `$Actions`, `$Queries`, `$Interfaces`, `$osdkMetadata`, `$branch`, and `$ontologyRid`) are not part of the browser boundary.
+This repository consumes the consumer SDK from `apps/web` only. `apps/web/src/osdk/resources.ts` is the browser import boundary and must export exactly the union of generated `$Objects`, `$Actions`, `$Queries`, and `$Interfaces` (70 resource exports). Infrastructure namespace objects and metadata (`$Objects`, `$Actions`, `$Queries`, `$Interfaces`, `$osdkMetadata`, `$branch`, and `$ontologyRid`) are not part of the browser boundary.
 
-Live household screens now query concrete Places, Watch, and Things objects and the `JorbyContent` interface. Provider search is labeled MOCK. Seeded prototype catalog and Finance numbers remain allowed only on `/our-home/…`.
+Live household screens query concrete Lists, Notes, Places, Watch, and Things objects and the `JorbyContent` interface. Note archive calls `setJorbySharedNoteArchived`. `useMyMembership` still calls `getMyMembership`, which remains the identity-dependent query limitation and may 403. Search filters by content type and `tagNames`. Tag create/rename/archive, Tag attach/detach, Thing/Place Entry/Visit photo upload, and List Item `thingId` selection are in the SDK and not yet in the UI. Live place search uses `GOOGLE` and live watch search uses `TMDB`. `MOCK` remains for deterministic tests. Seeded prototype catalog and Finance numbers remain allowed only on `/our-home/…`.
 
 Seeded prototype catalog and Finance numbers remain allowed only on `/our-home/…`. Live Foundry households must not show that mock data. Finance stays a household-tied mock app mode with no Foundry money objects.
 
@@ -55,14 +55,16 @@ The enrollment does not support Client Credentials. Therefore no confidential Ap
 ## Exact consumer SDK contract
 
 ```text
-@jorby/sdk     0.14.0
-@osdk/react    2.67.0
-@osdk/client   2.67.0
-@osdk/api      2.67.0
+@jorby/sdk     0.20.0 (resolved)
+@osdk/react    2.73.0
+@osdk/client   2.73.0
+@osdk/api      2.73.0
 @osdk/oauth    1.13.0
 ```
 
-### Object types — deployed (15)
+`src/osdk/resources.ts` exports exactly the union of generated `$Objects`, `$Actions`, `$Queries`, and `$Interfaces`: 70 resource exports.
+
+### Object types — deployed (16)
 
 | Generated export           | Object type RID                                                     |
 | -------------------------- | ------------------------------------------------------------------- |
@@ -77,34 +79,39 @@ The enrollment does not support Client Credentials. Therefore no confidential Ap
 | `JorbyPlaceReview`         | `ri.ontology.main.object-type.3f0bcc49-e6b1-42ed-89b9-439c72ea07fe` |
 | `JorbySharedList`          | `ri.ontology.main.object-type.fe252ddb-870e-4b4a-acc9-34fc34a7bdba` |
 | `JorbySharedNote`          | `ri.ontology.main.object-type.a8fbb320-cca1-4ba4-954d-9bb4574f6474` |
+| `JorbyTag`                 | `ri.ontology.main.object-type.c07cf151-48a5-4ccf-8639-1fc3ceacdace` |
 | `JorbyThing`               | `ri.ontology.main.object-type.de7038fb-aa55-4716-8874-4ef7ba0bf5d9` |
 | `JorbyVisit`               | `ri.ontology.main.object-type.6795f54f-a5da-42a8-a2b1-13ca4b023e90` |
 | `JorbyWatchEntry`          | `ri.ontology.main.object-type.2085fd61-b22c-42b4-9d0b-39722c3cd7d6` |
 | `JorbyWatchReaction`       | `ri.ontology.main.object-type.30a1223d-bbc0-460f-87ef-2bd42092303e` |
 
-The generated object definitions expose 31 deployed links.
+The generated object definitions expose 36 imported links, including all five Tag links. The List Item → Thing link (`ri.ontology.main.relation.94c3dfb7-b410-4e6e-8e32-a09decf5ff24`) is deployed in the Ontology and is not in the SDK `0.20.0` imported-link set. Browser code must use List Item Actions and `thingId`, not typed `linkedThing` traversal.
+
+| Deployed Tag relationship | Link RID                                                         |
+| ------------------------- | ---------------------------------------------------------------- |
+| Tag ↔ Shared List         | `ri.ontology.main.relation.5b35448a-8704-450e-a232-56c1182deba9` |
+| Tag ↔ Shared Note         | `ri.ontology.main.relation.df6da6db-5869-4f47-be4f-3287a8c3f652` |
+| Tag ↔ Thing               | `ri.ontology.main.relation.f66cf77d-3d80-4753-8fa5-3751eef6ff5d` |
+| Tag ↔ Place Entry         | `ri.ontology.main.relation.676b9df9-4b05-4e88-96de-a2e54af3685b` |
+| Tag ↔ Watch Entry         | `ri.ontology.main.relation.6f3f3035-e531-4e11-b426-814c71fa91c9` |
 
 ### Interfaces — deployed (3)
 
 | Generated export         | Interface RID                                                     | Concrete implementations |
 | ------------------------ | ----------------------------------------------------------------- | -----------------------: |
-| `JorbyHouseholdScoped`   | `ri.ontology.main.interface.c062bcf2-76a2-4398-9167-4f4e4287e31e` |                       13 |
+| `JorbyHouseholdScoped`   | `ri.ontology.main.interface.c062bcf2-76a2-4398-9167-4f4e4287e31e` |                       14 |
 | `JorbyContent`           | `ri.ontology.main.interface.3cae8e8a-2f52-4164-a2ad-c04ce5364c70` |                        5 |
 | `JorbyMemberReaction`    | `ri.ontology.main.interface.38ed317e-d0d3-4fb7-a02c-d4955d808c91` |                        3 |
 
-`JorbyContent` enables polymorphic recent-content and search queries at the Ontology/SDK layer.
+`JorbyContent` still has exactly five implementations and now includes denormalized `tagNames`. This GitHub app queries it for Home and search. Search can require selected `tagNames` and, when a type is chosen, reads that concrete object instead.
 
-### Consumer Actions — deployed (48)
+### Consumer Actions — deployed (45)
 
 | Generated export                 | Action type RID                                                    |
 | -------------------------------- | ------------------------------------------------------------------ |
 | `acquireJorbySharedNoteLock`     | `ri.actions.main.action-type.3672157e-ba46-4472-b62a-0b8023accff8` |
 | `addJorbyListItem`               | `ri.actions.main.action-type.fe7eabaf-6a96-4a29-bed3-1303e83bdab9` |
 | `addJorbyListItemAtPosition`     | `ri.actions.main.action-type.aacb19ec-e4e1-4065-a223-5aa53cb12584` |
-| `archiveJorbyListItem`           | `ri.actions.main.action-type.2b27850f-7e07-4b45-baf5-601fcafb2845` |
-| `archiveJorbySharedNote`         | `ri.actions.main.action-type.aa05f99b-e2ce-4a64-9e93-8bee0a078228` |
-| `assignJorbyListItem`            | `ri.actions.main.action-type.7250fb22-a6d1-4720-a3d0-2f0dd4e42a4e` |
-| `clearJorbyListItemAssignment`   | `ri.actions.main.action-type.895820a3-e985-4d8f-8d23-0c552dcaf783` |
 | `correctJorbyPlaceProviderMatch` | `ri.actions.main.action-type.33c46d14-b674-41df-b1a3-441bbeff2b90` |
 | `createJorbyManualPlace`         | `ri.actions.main.action-type.ece47441-c6c4-4608-8b50-6840627a67e6` |
 | `createJorbyManualWatchEntry`    | `ri.actions.main.action-type.58cb72bc-22f4-426c-acc4-0b682cb45199` |
@@ -114,6 +121,8 @@ The generated object definitions expose 31 deployed links.
 | `duplicateJorbySharedList`       | `ri.actions.main.action-type.919e316f-3f0f-41f6-803d-b25200115e7f` |
 | `heartbeatJorbySharedNoteLock`   | `ri.actions.main.action-type.ceda179d-37e9-4f69-b4f2-d9b9baf9544e` |
 | `manageJorbyPlaceReviews`        | `ri.actions.main.action-type.00114fc7-2477-4fcd-9aba-130ea72c091f` |
+| `manageJorbyTag`                 | `ri.actions.main.action-type.f90aae0e-de1a-4834-91e8-7c22e312d2c9` |
+| `manageJorbyTagLinks`            | `ri.actions.main.action-type.afcc1fb7-8f11-48f3-a923-107d2e221c89` |
 | `manageJorbyThingDetails`        | `ri.actions.main.action-type.958d83a2-2c9b-43b0-9349-091cfef1a2e5` |
 | `manageJorbyThingLifecycle`      | `ri.actions.main.action-type.952d8c20-92e8-4d2d-8b59-4aafa7d185a9` |
 | `manageJorbyThingReservation`    | `ri.actions.main.action-type.969afed9-d2c5-4adb-94cd-9db72f01126b` |
@@ -123,8 +132,6 @@ The generated object definitions expose 31 deployed links.
 | `reconcileJorbyWatchEntry`       | `ri.actions.main.action-type.55fd19e8-5549-489a-b48b-7aed1d2c9b47` |
 | `refreshJorbyCatalogPlace`       | `ri.actions.main.action-type.a5395484-457b-46e9-bd68-ea8465cba8c9` |
 | `releaseJorbySharedNoteLock`     | `ri.actions.main.action-type.37663028-c301-4526-b7bb-bdf0ed67f675` |
-| `restoreJorbyListItem`           | `ri.actions.main.action-type.ebf62f60-0729-4616-963d-e1e613d6b5f9` |
-| `restoreJorbySharedNote`         | `ri.actions.main.action-type.4139000e-ce58-4dc6-ba3e-b65bbf97615a` |
 | `saveJorbyDish`                  | `ri.actions.main.action-type.e39a7568-6b5d-47ed-b9e1-8319de2952af` |
 | `saveJorbyListItem`              | `ri.actions.main.action-type.c6e1a1f8-cf6a-44b8-9218-ed2397ecc054` |
 | `saveJorbyPlaceEntry`            | `ri.actions.main.action-type.74024713-bee1-4b75-a17a-a7c9d818a4e0` |
@@ -139,6 +146,7 @@ The generated object definitions expose 31 deployed links.
 | `setJorbyListItemCompletion`     | `ri.actions.main.action-type.8afd5cad-16d5-44ce-b94b-7668ea78cd50` |
 | `setJorbyPlaceEntryArchived`     | `ri.actions.main.action-type.1404c037-1e91-4722-b0dc-89cf2bbc591d` |
 | `setJorbySharedListArchived`     | `ri.actions.main.action-type.c812e15f-9f8d-4e8a-a101-56f6f837fd6e` |
+| `setJorbySharedNoteArchived`     | `ri.actions.main.action-type.aa05f99b-e2ce-4a64-9e93-8bee0a078228` |
 | `setJorbyVisitArchived`          | `ri.actions.main.action-type.38e1e02d-52f7-4f9e-bbff-33297786ea9c` |
 | `setJorbyVisitDishes`            | `ri.actions.main.action-type.3ae0a4ff-e8c9-4ec1-9ed7-3c718378fcfa` |
 | `setJorbyVisitParticipants`      | `ri.actions.main.action-type.56c9a340-8eb7-4ff6-8df9-72c533e195f1` |
@@ -158,7 +166,7 @@ The generated object definitions expose 31 deployed links.
 | `searchJorbyMediaTitles`    | `0.5.0` | `ri.function-registry.main.function.286b77e7-bff9-4053-9ea4-230ddc561089` |
 | `searchJorbyPlaces`         | `0.5.0` | `ri.function-registry.main.function.1854643e-3c5c-4d23-99f1-0c7cb9dd930e` |
 
-`getJorbyWatchTonight` is identity-independent and fail-closed on Household/object security. `getMyMembership(householdId)` remains identity-dependent. This React app still calls it for the current member on Home, Notes, Places, Watch, Things, and Finance. It may still return 403; create/edit Actions and Watch Tonight do not send that query. The five Places/Watch queries expose stable provider-neutral DTOs, but currently accept only the deterministic `MOCK` provider behavior. They do not prove real provider connectivity.
+`getJorbyWatchTonight` is `0.6.0`. The other five queries remain `0.5.0`. `getMyMembership(householdId)` is the sole identity-dependent direct-query limitation. This React app still calls it for the current member on Home, Notes, Places, Watch, Things, and Finance. It may still return 403. The four Places/Watch queries implement deterministic `MOCK` plus real `GOOGLE`/`TMDB` adapters. This app sends `GOOGLE` for places and `TMDB` for watch. Detail lookups use the saved object's `primaryProvider`.
 
 Do not send `currentUserId` on any consumer Action. Browser OAuth stays on `api:use-ontologies-read` and `api:use-ontologies-write`. Do not add Admin scopes.
 
@@ -167,13 +175,14 @@ Do not send `currentUserId` on any consumer Action. Browser OAuth stays on `api:
 | Domain                     | Status                                     | Current truth                                                                                               |
 | -------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
 | Household / Membership     | Deployed; membership manually administered | Concrete objects, security, current-user resolver                                                           |
-| Lists / Notes              | Deployed                                   | Concrete objects, links, governed Actions, Note lock lifecycle                                              |
-| Places                     | Deployed concrete slice                    | 6 objects, concrete links and Actions, deterministic MOCK queries                                           |
-| Watch                      | Deployed concrete slice                    | 3 objects, concrete links and Actions, deterministic MOCK queries                                           |
-| Things                     | Deployed concrete slice                    | 1 object, concrete links and composite lifecycle/detail/reservation Actions                                 |
-| Interfaces                 | **Deployed**                               | `JorbyHouseholdScoped`, `JorbyContent`, and `JorbyMemberReaction`; 13/5/3 concrete implementations          |
-| Global polymorphic search  | **Enabled in Ontology/SDK**                | `JorbyContent` is queryable polymorphically                                                                 |
-| Real provider integrations | **Pending**                                | Credentials and Foundry egress approval are outstanding; adapters remain MOCK                               |
+| Lists / Notes              | Deployed                                   | Concrete objects, links, governed Actions, Note lock lifecycle; optional List Item `thingId`                |
+| Tags                       | **Deployed**                               | `JorbyTag`, five Tag links, two composite Actions, and `JorbyContent.tagNames`                              |
+| Places                     | Deployed concrete slice                    | 6 objects, concrete links/Actions, provider queries, optional Place Entry/Visit `photo`                     |
+| Watch                      | Deployed concrete slice                    | 3 objects, concrete links/Actions, provider queries; canonical Media Title has no household media           |
+| Things                     | Deployed concrete slice                    | 1 object, composite Actions, optional `photo` Attachment                                                    |
+| Interfaces                 | **Deployed**                               | `JorbyHouseholdScoped`, `JorbyContent`, and `JorbyMemberReaction`; 14/5/3 concrete implementations          |
+| Global polymorphic search  | **Enabled in Ontology/SDK**                | `JorbyContent` search can filter by content type and `tagNames`                                             |
+| Real provider integrations | **Production**                             | This app uses `GOOGLE` for places and `TMDB` for watch; `MOCK` stays on deterministic tests                 |
 | Money / Together           | Out of v1 Foundry                          | No backend resources. This repo still has a household-tied Finance mock UI (`D-MONEY-*`)                    |
 
 All deployed private object types use Object Storage v2 edit-only properties and a Household `accessGroupId` security discriminator.
@@ -191,7 +200,34 @@ The enrollment permits at most 60 Action types. To fit the deployed Places, Watc
 | `manageJorbyWatchProvider`    | `ri.actions.main.action-type.9c04b9e8-cbe3-42c7-8c8c-0a1348c2d6d2` |
 | `manageJorbyWatchReaction`    | `ri.actions.main.action-type.c7f49236-b41c-47cf-9966-0baff2f2ebf4` |
 
-Accordingly, these six legacy SDK symbols no longer exist and must not be imported: `archiveJorbySharedList`, `completeJorbyListItem`, `reopenJorbyListItem`, `restoreJorbySharedList`, `updateJorbyListItem`, and `updateJorbySharedList`. Consumers should use the generated final-state/function-backed List Actions that remain in `0.14.0`.
+Accordingly, these six legacy SDK symbols no longer exist and must not be imported: `archiveJorbySharedList`, `completeJorbyListItem`, `reopenJorbyListItem`, `restoreJorbySharedList`, `updateJorbyListItem`, and `updateJorbySharedList`.
+
+Plan B then deleted five more Action types and repurposed `archiveJorbySharedNote` as `setJorbySharedNoteArchived`:
+
+| Plan B outcome                  | Old generated symbol                                    | Action type RID                                                    |
+| ------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------ |
+| Deleted                         | `archiveJorbyListItem`                                  | `ri.actions.main.action-type.2b27850f-7e07-4b45-baf5-601fcafb2845` |
+| Deleted                         | `assignJorbyListItem`                                   | `ri.actions.main.action-type.7250fb22-a6d1-4720-a3d0-2f0dd4e42a4e` |
+| Deleted                         | `clearJorbyListItemAssignment`                          | `ri.actions.main.action-type.895820a3-e985-4d8f-8d23-0c552dcaf783` |
+| Deleted                         | `restoreJorbyListItem`                                  | `ri.actions.main.action-type.ebf62f60-0729-4616-963d-e1e613d6b5f9` |
+| Deleted                         | `restoreJorbySharedNote`                                | `ri.actions.main.action-type.4139000e-ce58-4dc6-ba3e-b65bbf97615a` |
+| Repurposed/renamed, not deleted | `archiveJorbySharedNote` → `setJorbySharedNoteArchived` | `ri.actions.main.action-type.aa05f99b-e2ce-4a64-9e93-8bee0a078228` |
+
+Those six old symbols are absent from `@jorby/sdk@0.20.0`. Use `setJorbyListItemArchived`, `setJorbyListItemAssignee`, and `setJorbySharedNoteArchived`.
+
+## Tag workflow contract
+
+- `manageJorbyTag` supports `FIND_OR_CREATE`, `RENAME`, and `SET_ARCHIVED`.
+- `manageJorbyTagLinks` supports `ATTACH`/`DETACH` against exactly one Shared List, Shared Note, Thing, Place Entry, or Watch Entry, with that target's current revision.
+- Tag links are authoritative. The Action updates the target's `tagNames`, `searchText`, audit fields, and revision.
+- `JorbySharedNote.tags` remains the separate Note-local free-form tag array.
+- Browser callers never supply `currentUserId`.
+
+## Photo Attachment contract
+
+The property API name is `photo`, type `Attachment`, optional on `JorbyThing`, `JorbyPlaceEntry`, and `JorbyVisit`. Canonical Catalog Place and Media Title objects have no household Attachment.
+
+Upload or replace with `createAttachmentUpload` from `@osdk/client`: `manageJorbyThingDetails` operation `SET_PHOTO`, or the `photo` parameter on `saveJorbyPlaceEntry` / `saveJorbyVisit`. Clear with `CLEAR_PHOTO` or `clearPhoto: true`, and never send both. JPEG, PNG, and WebP up to 10 MB are accepted. HEIC/HEIF must be converted in the frontend or the Action fails closed. This UI is not built yet.
 
 ## Notes collaboration contract
 
@@ -212,24 +248,26 @@ Validated before this consumer migration:
 - Public login/callback and local CORS.
 - Group-based Household object security and active Membership resolution.
 - Household, Lists, Notes, Places, Watch, and Things concrete Ontology resources and Actions deployed.
-- Functions diagnostics/publication at release `0.6.0`.
-- SDK `0.14.0` generated with exact 15/48/6/3 namespace counts, 31 links, 72 boundary exports, and 13/5/3 interface implementations.
-- Function-backed edits no longer call `Admin.Users.getCurrent`; identity comes from trusted Action context.
+- Functions diagnostics/publication through edit release `0.6.1`.
+- SDK `0.20.0` generated with exact 16/45/6/3 namespace counts, 36 imported links, 70 boundary exports, and 14/5/3 interface implementations.
+- Action identity comes from trusted Action context. The browser does not supply `currentUserId`.
 
 Remaining risks:
 
 1. Membership/group administration remains manual and only one active Membership currently exists.
-2. Provider behavior is deterministic MOCK only; credentials, egress, attribution, quotas, and production failure handling remain pending.
-3. Shared Note Actions remain experimental.
-4. No uploaded media exists in v1.
-5. Repurposed Action RIDs are a deliberate breaking change for clients that still import the six removed legacy symbols.
+2. Global search filters by content type and `tagNames`. Tag create/rename/attach is still not in the UI.
+3. Live place and watch search use `GOOGLE` and `TMDB`. `MOCK` stays on deterministic tests.
+4. Shared Note Actions remain experimental.
+5. Photo upload/replace/clear UX is not built. HEIC/HEIF needs frontend conversion or fails safely.
+6. The List Item → Thing link is not a typed traversal in SDK `0.20.0`.
+7. Plan B's five deletions and one renamed Action are breaking changes for clients that import the old symbols.
 
 ## Immediate next work
 
-1. Keep `apps/web` on generated `0.14.0` resources through `src/osdk/resources.ts` while preserving `OsdkProvider` wiring.
-2. Exercise Places, Watch, and Things UI against concrete object types and Actions; label mock provider behavior clearly.
-3. Keep Home / We Should / global search on the deployed `JorbyContent` interface.
-4. Obtain provider credentials and egress approval before implementing real adapters.
+1. `apps/web` is pinned to `@jorby/sdk@0.20.0` through `src/osdk/resources.ts`.
+2. Build Tag management and attach/detach, photo upload/replace/clear, and optional List Item `thingId` against the generated Actions.
+3. Search already filters by content type and `tagNames`. Tag management UI is still open.
+4. Keep live place search on `GOOGLE` and live watch search on `TMDB`.
 5. Add Abby's Membership when her consumer identity is available.
 
 ## Release history
@@ -242,4 +280,6 @@ Remaining risks:
 | `0.4.0–0.6.0`  | Regenerated the original Household/List/Note surface                                                                                                              |
 | `0.7.0–0.10.0` | Added deployed Places, Watch, and Things concrete resources; converged on the exact 15-object, 31-link, 48-Action, 6-query consumer boundary |
 | `0.11.0`       | Added 3 deployed interfaces with 13/5/3 implementations and expanded the exact consumer boundary to 72 exports |
-| `0.14.0`       | Functions `0.6.0`; 42 Function-backed Actions rebound; `getJorbyWatchTonight` at `0.6.0`; no `currentUserId` consumer parameter; current |
+| `0.14.0`        | Functions `0.6.0`; 42 Function-backed Actions rebound; `getJorbyWatchTonight` at `0.6.0`; no `currentUserId` consumer parameter |
+| `0.15.0–0.19.0` | Intermediate regeneration while Tags, photo Attachments, List Item → Thing, Function `0.6.1`, and Plan B Action changes were deployed |
+| `0.20.0`        | Current: 16 objects, 45 consumer Actions, 6 queries, 3 interfaces, 70 exports; adds `JorbyTag`, five Tag links, `setJorbySharedNoteArchived`, and photo-capable Action contracts |

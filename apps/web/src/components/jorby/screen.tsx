@@ -163,8 +163,8 @@ export function FilterChip({
         'inline-flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-medium whitespace-nowrap transition-colors',
         'focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
         active
-          ? 'bg-section text-white shadow-card'
-          : 'bg-card/70 text-foreground shadow-card backdrop-blur hover:bg-card',
+          ? 'bg-card text-section-ink shadow-card ring-2 ring-section'
+          : 'bg-card/70 text-foreground shadow-card ring-2 ring-transparent backdrop-blur hover:bg-card',
       )}
     >
       {children}

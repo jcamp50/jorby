@@ -1,4 +1,4 @@
-/** Composite Action operation names from the generated 0.14.0 parameter docs. */
+/** Composite Action operation names from the generated 0.20.0 parameter docs. */
 export const placeReviewOperation = {
   save: 'SAVE',
 } as const
@@ -6,6 +6,10 @@ export const placeReviewOperation = {
 export const watchProviderOperation = {
   saveProvider: 'SAVE_PROVIDER',
 } as const
+
+/** Live catalog providers. MOCK stays on deterministic tests only. */
+export const placeProvider = 'GOOGLE' as const
+export const mediaProvider = 'TMDB' as const
 
 export const watchReactionOperation = {
   want: 'WANT',

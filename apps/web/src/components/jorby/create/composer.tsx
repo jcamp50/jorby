@@ -1,6 +1,8 @@
 import { Plus } from 'lucide-react'
 import { type FormEvent, type ReactNode, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { sectionFromPath } from '@/lib/sections'
 import {
   Sheet,
   SheetContent,
@@ -25,6 +27,7 @@ export function CreateComposer({
   onSubmit: () => boolean | Promise<boolean>
   children: ReactNode
 }) {
+  const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
 
   async function submit(event: FormEvent) {
@@ -50,6 +53,7 @@ export function CreateComposer({
       </button>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
+          data-section={sectionFromPath(pathname)}
           side="bottom"
           showCloseButton={false}
           className="inset-x-0 bottom-0 gap-0 overflow-hidden rounded-t-3xl border-0 pb-[env(safe-area-inset-bottom)] md:inset-x-auto md:left-1/2 md:w-full md:max-w-lg md:-translate-x-1/2"

@@ -1,12 +1,12 @@
 # Jorby v1 ontology specification
 
 **Status:** Living technical specification  
-**Last updated:** 2026-09-12
+**Last updated:** 2026-09-30
 **Ontology target:** Object Storage v2 with project-based permissions
 
 This GitHub repository specifies the Ontology so the consumer UI stays aligned. Object types, Actions, Functions, and object security are implemented in Foundry, not in this git repository.
 
-This document defines Jorby's logical Ontology. Household, Lists, Notes, Places, Watch, and Things API names are confirmed against the live Ontology and `@jorby/sdk@0.14.0`. The package contains 15 objects, 31 links, 48 consumer Actions, 6 query Functions, and 3 interfaces with 13/5/3 concrete implementations; the Functions release is `0.6.0`. `getJorbyWatchTonight` is imported at `0.6.0`; `getMyMembership` and the four Places/Watch provider queries remain `0.5.0`. Function-backed edits receive the submitting user from trusted Action context and must not take `currentUserId` from the browser. Global polymorphic search through `JorbyContent` is enabled at the Ontology/SDK layer. This GitHub frontend queries that interface for Home recent activity and household search. Once published, avoid casually renaming active API names; update this specification and plan a migration first.
+This document defines Jorby's logical Ontology. Household, Lists, Notes, Tags, Places, Watch, and Things API names are confirmed against the live Ontology and resolved `@jorby/sdk@0.20.0`. The consumer package contains 16 objects, 45 Actions, 6 query Functions, 3 interfaces with 14/5/3 concrete implementations, and 70 top-level boundary resources. Generated object definitions expose 36 imported links. The Ontology itself has 56 Actions. The latest `Jorby Functions` edit release is `0.6.1`. `getJorbyWatchTonight` is `0.6.0`; the other five queries remain `0.5.0`. Consumer Actions derive actor identity from trusted Action context and must not take `currentUserId` from the browser. This GitHub frontend queries `JorbyContent` for Home and household search. Tag management, photo upload, and List Item `thingId` selection are deployed in the SDK and not yet in the UI. Once published, avoid casually renaming active API names; update this specification and plan a migration first.
 
 ## 1. Modeling rules
 
@@ -23,11 +23,11 @@ This document defines Jorby's logical Ontology. Household, Lists, Notes, Places,
 
 ### Interfaces (deployed)
 
-- `JorbyHouseholdScoped` — 13 concrete implementations.
-- `JorbyContent` — 5 concrete implementations.
+- `JorbyHouseholdScoped` — 14 concrete implementations.
+- `JorbyContent` — exactly 5 concrete implementations.
 - `JorbyMemberReaction` — 3 concrete implementations.
 
-All three interfaces and their concrete property/link mappings are generated in `@jorby/sdk@0.14.0`.
+All three interfaces and their concrete property/link mappings are generated in resolved `@jorby/sdk@0.20.0`.
 
 ### Object types
 
@@ -36,21 +36,23 @@ All three interfaces and their concrete property/link mappings are generated in 
 | Core   | `Household`, `HouseholdMembership`, `HouseholdInvite`                      |
 | Lists  | `SharedList`, `ListItem`                                                   |
 | Notes  | `SharedNote`                                                               |
+| Tags   | `Tag`                                                                      |
 | Places | `CatalogPlace`, `PlaceEntry`, `Visit`, `Dish`, `PlaceReview`, `DishReview` |
 | Watch  | `MediaTitle`, `WatchEntry`, `WatchReaction`                                |
 | Things | `Thing`                                                                    |
 
-Total: 16 concrete object types.
+Total logical inventory: 17 concrete object types, of which 16 are deployed in the consumer SDK and `HouseholdInvite` remains planned/service-only.
 
-### Deployed object types (current consumer SDK `0.14.0`)
+### Deployed object types (current consumer SDK `0.20.0`)
 
 - Core: `JorbyHousehold`, `JorbyHouseholdMembership`.
 - Lists and Notes: `JorbySharedList`, `JorbyListItem`, `JorbySharedNote`.
+- Tags: `JorbyTag` (`ri.ontology.main.object-type.c07cf151-48a5-4ccf-8639-1fc3ceacdace`).
 - Places: `JorbyCatalogPlace`, `JorbyPlaceEntry`, `JorbyVisit`, `JorbyDish`, `JorbyPlaceReview`, `JorbyDishReview`.
 - Watch: `JorbyMediaTitle`, `JorbyWatchEntry`, `JorbyWatchReaction`.
 - Things: `JorbyThing`.
 
-That is 15 deployed consumer objects. `HouseholdInvite` remains a planned/service-only logical type and is not in the browser SDK. See `implementation-status.md` for exact object type RIDs.
+That is 16 deployed consumer objects. See `implementation-status.md` for exact object type RIDs.
 
 ## 3. Reusable value types
 
@@ -82,11 +84,11 @@ Prefer integer half-star units over floating-point ratings so validation and equ
 
 ## 4. Interfaces — deployed contracts
 
-Interfaces are contracts over concrete object types, not storage types. The `Jorby` prefix matches the deployed object API-name convention. All three interfaces below and their concrete mappings are deployed in the Ontology and generated in `@jorby/sdk@0.14.0`. Application code may query them polymorphically while continuing to use concrete object types for domain-specific behavior.
+Interfaces are contracts over concrete object types, not storage types. The `Jorby` prefix matches the deployed object API-name convention. All three interfaces below and their concrete mappings are deployed in the Ontology and generated in resolved `@jorby/sdk@0.20.0`. Application code may query them polymorphically while continuing to use concrete object types for domain-specific behavior.
 
 ### 4.1 `JorbyHouseholdScoped`
 
-Non-searchable. Implemented by 13 consumer-readable private types: `Household`, `HouseholdMembership`, `SharedList`, `ListItem`, `SharedNote`, `PlaceEntry`, `Visit`, `Dish`, `PlaceReview`, `DishReview`, `WatchEntry`, `WatchReaction`, and `Thing`. It excludes service-only `HouseholdInvite` and shared canonical provider types.
+Non-searchable. Implemented by 14 consumer-readable private types: `Household`, `HouseholdMembership`, `SharedList`, `ListItem`, `SharedNote`, `Tag`, `PlaceEntry`, `Visit`, `Dish`, `PlaceReview`, `DishReview`, `WatchEntry`, `WatchReaction`, and `Thing`. It excludes service-only `HouseholdInvite` and shared canonical provider types.
 
 | Property           |    Logical type | Required | Rule                                  |
 | ------------------ | --------------: | -------: | ------------------------------------- |
@@ -111,8 +113,9 @@ Searchable and paired with `JorbyHouseholdScoped` on its concrete types. Impleme
 | `contentId`    |       String |      Yes | Maps to concrete primary key |
 | `displayTitle` |       String |      Yes | Cross-section display        |
 | `searchText`   |       String |      Yes | Denormalized search document |
+| `tagNames`     | String array |      Yes | Normalized names of active linked Tags; links are source |
 
-Required link constraint: `household` points to exactly one `Household`.
+Required link constraint: `household` points to exactly one `Household`. `Tag` is household-scoped and is not `JorbyContent`.
 
 The initial interface does not define `relatedNotes`. Concrete many-to-many Note links remain authoritative until a supported polymorphic traversal is required. The frontend can query this interface for Home and global search, inspect the concrete object type, and route to the corresponding detail screen.
 
@@ -236,6 +239,7 @@ Primary key: `listId`, random UUID.
 | `name`                          |          String |      Yes |
 | `description`                   |          String |       No |
 | `isPinned`                      |         Boolean |      Yes |
+| `tagNames`                      |    String array |      Yes |
 | `searchText`                    |          String |      Yes |
 | shared audit/archive properties |               — |        — |
 
@@ -253,6 +257,7 @@ Primary key: `listItemId`, random UUID.
 | `householdId`                   |   `HouseholdId` |      Yes | Derived from List       |
 | `accessGroupId`                 | `AccessGroupId` |      Yes | Derived from List       |
 | `listId`                        |     UUID string |      Yes | Parent                  |
+| `thingId`                       |     UUID string |       No | Optional linked Thing   |
 | `text`                          |          String |      Yes | Nonblank                |
 | `rank`                          |          String |      Yes | Fractional ordering key |
 | `isComplete`                    |         Boolean |      Yes | Default false           |
@@ -264,6 +269,7 @@ Primary key: `listItemId`, random UUID.
 Invariants:
 
 - Item and List share Household and access group.
+- An optional linked Thing shares the same Household. SDK `0.20.0` does not generate typed `linkedThing` traversal; use the List Item Action `thingId` parameter.
 - Active ranks are unique within a List.
 - Set completion to a requested final value; do not implement a blind invert.
 - Unchecking clears completion metadata.
@@ -294,12 +300,13 @@ Primary key: `noteId`, random UUID.
 
 `displayTitle` maps to `title`.
 
-Tag normalization:
+Note-local `tags` normalization:
 
-- Trim whitespace.
-- Reject empty values.
+- Trim whitespace and reject empty values.
 - Compare case-insensitively.
 - Store normalized lowercase values unless display casing becomes an explicit requirement.
+
+Shared Tag projection: Tag links are the source of truth. `tagNames` holds normalized names of active linked `JorbyTag` objects and is not edited directly. `tags` does not replace `tagNames`.
 
 Lock invariants:
 
@@ -312,6 +319,23 @@ Lock invariants:
 - Archive clears lock state.
 
 Note links are many-to-many with Shared Lists, Place Entries, Watch Entries, and Things.
+
+## 7a. Tags
+
+### `JorbyTag`
+
+Primary key: `tagId`, random UUID. Implements `JorbyHouseholdScoped` and is not `JorbyContent`.
+
+| Property           | Type            | Required | Rule                                      |
+| ------------------ | --------------- | -------: | ----------------------------------------- |
+| `tagId`            | UUID string     |      Yes | Immutable primary key                     |
+| `householdId`      | `HouseholdId`   |      Yes | Owning Household                          |
+| `accessGroupId`    | `AccessGroupId` |      Yes | Must match Household                      |
+| `name`             | String          |      Yes | Household-facing label                    |
+| `normalizedName`   | String          |      Yes | Trimmed lowercase uniqueness key          |
+| `searchText`       | String          |      Yes | System-maintained                         |
+
+Active Tag names are unique case-insensitively within one Household. `manageJorbyTag` performs `FIND_OR_CREATE`, `RENAME`, and `SET_ARCHIVED`. `manageJorbyTagLinks` performs `ATTACH` or `DETACH` against exactly one Shared List, Shared Note, Thing, Place Entry, or Watch Entry and requires that target's current revision. The target-side link API name is `tagLinks` because `JorbySharedNote` already has a legacy `tags` property. See `implementation-status.md` for Action and link RIDs.
 
 ## 8. Places
 
@@ -356,7 +380,8 @@ Invariants:
 
 - One Catalog Place per external provider key.
 - Store curated provider fields, not raw response JSON.
-- Persist photo references and attribution, not secret-bearing URLs.
+- Persist provider photo references and attribution, not secret-bearing URLs.
+- `JorbyCatalogPlace` has no household `photo` Attachment. Uploads live only on private Place Entries and Visits.
 - Refresh is manual/on-demand.
 - Canonical refresh never overwrites Household state.
 - Manual Places never create shared canonical records.
@@ -799,18 +824,18 @@ The concrete per-section views and `JorbyContent`-backed polymorphic query formu
 
 ## 18. OSDK import boundary
 
-### Current consumer SDK (`@jorby/sdk@0.14.0`)
+### Current consumer SDK (resolved `@jorby/sdk@0.20.0`)
 
 The deployed Developer Console scope and generated package contain:
 
-- 15 concrete object types spanning Household, Lists, Notes, Places, Watch, and Things.
-- 31 typed links exposed through those generated object definitions.
-- 48 consumer Actions.
-- 6 query Functions: `getJorbyWatchTonight` at `0.6.0`; `getMyMembership`, `searchJorbyPlaces`, `getJorbyPlaceDetails`, `searchJorbyMediaTitles`, and `getJorbyMediaTitleDetails` at `0.5.0`.
-- 3 interfaces with 13/5/3 concrete implementations: `JorbyHouseholdScoped`, `JorbyContent`, and `JorbyMemberReaction`.
-- 72 exact resource exports across `$Objects`, `$Actions`, `$Queries`, and `$Interfaces`.
+- 16 concrete object types spanning Household, Lists, Notes, Tags, Places, Watch, and Things.
+- 36 imported typed links, including all five Tag links. The List Item → Thing relation is deployed and is not a typed traversal in this SDK.
+- 45 consumer Actions. The Ontology contains 56 Actions; the other 11 are outside the browser SDK.
+- 6 query Functions: `getJorbyWatchTonight` at `0.6.0`; the other five at `0.5.0`.
+- 3 interfaces with 14/5/3 concrete implementations.
+- Exactly 70 resource exports across `$Objects`, `$Actions`, `$Queries`, and `$Interfaces`.
 
-The `Jorby Functions` release is `0.6.0`. Function-backed Actions take the submitting user from trusted Action context; do not send `currentUserId` from the browser. The runtime remains pinned exactly to `@osdk/react@2.67.0`, `@osdk/client@2.67.0`, `@osdk/api@2.67.0`, and `@osdk/oauth@1.13.0`.
+The latest edit release is `0.6.1`. Runtime packages are pinned to `@osdk/react@2.73.0`, `@osdk/client@2.73.0`, `@osdk/api@2.73.0`, and `@osdk/oauth@1.13.0`. Do not send `currentUserId` from the browser. The only household upload properties are optional `photo` Attachments on `JorbyThing`, `JorbyPlaceEntry`, and `JorbyVisit`.
 
 ### Deployed concrete additions
 
@@ -818,15 +843,15 @@ The `Jorby Functions` release is `0.6.0`. Function-backed Actions take the submi
 - Watch: `JorbyMediaTitle`, `JorbyWatchEntry`, and `JorbyWatchReaction`, with concrete links, governed Actions, provider-neutral queries, and the smart-queue query.
 - Things: `JorbyThing`, with its Household/Membership/Note links and governed composite Actions.
 
-The provider-neutral query adapters are deterministic `MOCK` only. Real provider credentials and Foundry egress remain pending. Canonical Catalog Place and Media Title objects are consumer-readable but contain no Household state; edits remain reachable only through governed Actions.
+Provider Functions implement deterministic `MOCK` plus production `GOOGLE`/`TMDB` adapters. This app uses `GOOGLE` for places and `TMDB` for watch. Canonical Catalog Place and Media Title objects contain no household Attachment.
 
 ### Deployed interface layer
 
-`JorbyHouseholdScoped`, `JorbyContent`, and `JorbyMemberReaction` are deployed and generated with 13/5/3 concrete implementations. `JorbyContent` enables global polymorphic search at the Ontology/SDK layer. The React global-search UI remains unimplemented.
+`JorbyHouseholdScoped`, `JorbyContent`, and `JorbyMemberReaction` are deployed with 14/5/3 concrete implementations. `JorbyContent` includes `tagNames`. This GitHub app queries the interface for Home and search.
 
 ### Action-cap migration
 
-Six legacy List Action RIDs were repurposed into composite Places/Watch/Things Actions to stay within the enrollment's 60-Action cap. The removed symbols are `archiveJorbySharedList`, `completeJorbyListItem`, `reopenJorbyListItem`, `restoreJorbySharedList`, `updateJorbyListItem`, and `updateJorbySharedList`. They must not appear in current application imports. See `implementation-status.md` for the exact current resource/RID tables.
+Six legacy List symbols remain unavailable: `archiveJorbySharedList`, `completeJorbyListItem`, `reopenJorbyListItem`, `restoreJorbySharedList`, `updateJorbyListItem`, and `updateJorbySharedList`. Plan B also removed `archiveJorbyListItem`, `assignJorbyListItem`, `clearJorbyListItemAssignment`, `restoreJorbyListItem`, and `restoreJorbySharedNote`, and renamed `archiveJorbySharedNote` to `setJorbySharedNoteArchived`. See `implementation-status.md`.
 
 ### Do not import
 

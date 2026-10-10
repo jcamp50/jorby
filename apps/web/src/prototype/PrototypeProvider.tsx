@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
 import { actionFailed, actionOk, AppErrorCode, type ActionResult } from '@/lib/errors'
+import { matchesSearch, searchIsActive } from '@/lib/search'
 import { thingLens } from '@/lib/thing-lifecycle'
 import {
   createSeedState,
@@ -377,7 +378,10 @@ type PrototypeContextValue = PrototypeState & {
   weShouldPlaces: PrototypeState['places']
   watchTonight: PrototypeState['watch']
   wishThings: PrototypeState['things']
-  search: (query: string) => { kind: string; id: string; title: string; hrefSuffix: string }[]
+  search: (
+    query: string,
+    filter?: { kinds: readonly string[]; tags: readonly string[] },
+  ) => { kind: string; id: string; title: string; hrefSuffix: string }[]
 }
 
 const PrototypeContext = createContext<PrototypeContextValue | null>(null)
@@ -568,76 +572,79 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
       weShouldPlaces,
       watchTonight,
       wishThings,
-      search: (query) => {
-        const q = query.trim().toLowerCase()
-        if (!q) {
+      search: (query, filter = { kinds: [], tags: [] }) => {
+        if (!searchIsActive(query, filter)) {
           return []
         }
         const hits: { kind: string; id: string; title: string; hrefSuffix: string }[] = []
+        const consider = (
+          kind: string,
+          id: string,
+          title: string,
+          hrefSuffix: string,
+          haystack: string,
+          tags: readonly string[],
+        ) => {
+          if (matchesSearch(haystack, tags, kind, query, filter)) {
+            hits.push({ kind, id, title, hrefSuffix })
+          }
+        }
         for (const list of state.lists) {
           const itemText = state.items
             .filter((item) => item.listId === list.id)
             .map((item) => item.text)
             .join(' ')
-          if (`${list.name} ${list.description ?? ''} ${list.tags.join(' ')} ${itemText}`.toLowerCase().includes(q)) {
-            hits.push({
-              kind: 'List',
-              id: list.id,
-              title: list.name,
-              hrefSuffix: `lists/${list.id}`,
-            })
-          }
+          consider(
+            'List',
+            list.id,
+            list.name,
+            `lists/${list.id}`,
+            `${list.name} ${list.description ?? ''} ${list.tags.join(' ')} ${itemText}`,
+            list.tags,
+          )
         }
         for (const note of state.notes) {
-          if (`${note.title} ${note.markdownBody} ${note.tags.join(' ')}`.toLowerCase().includes(q)) {
-            hits.push({
-              kind: 'Note',
-              id: note.id,
-              title: note.title,
-              hrefSuffix: `notes/${note.id}`,
-            })
-          }
+          consider(
+            'Note',
+            note.id,
+            note.title,
+            `notes/${note.id}`,
+            `${note.title} ${note.markdownBody} ${note.tags.join(' ')}`,
+            note.tags,
+          )
         }
         for (const place of state.places) {
           const reviews = state.placeReviews[place.id] ?? []
           const reviewText = reviews.map((review) => review.reviewText).join(' ')
-          if (
-            `${place.name} ${place.neighborhood} ${place.cuisine} ${place.sharedNote ?? ''} ${reviewText}`
-              .toLowerCase()
-              .includes(q)
-          ) {
-            hits.push({
-              kind: 'Place',
-              id: place.id,
-              title: place.name,
-              hrefSuffix: `places/${place.id}`,
-            })
-          }
+          consider(
+            'Place',
+            place.id,
+            place.name,
+            `places/${place.id}`,
+            `${place.name} ${place.neighborhood} ${place.cuisine} ${place.sharedNote ?? ''} ${place.tags.join(' ')} ${reviewText}`,
+            place.tags,
+          )
         }
         for (const entry of state.watch) {
           const reviewText = entry.reviews.map((review) => review.reviewText).join(' ')
-          if (`${entry.title} ${entry.tags.join(' ')} ${reviewText}`.toLowerCase().includes(q)) {
-            hits.push({
-              kind: 'Watch',
-              id: entry.id,
-              title: entry.title,
-              hrefSuffix: `watch/${entry.id}`,
-            })
-          }
+          consider(
+            'Watch',
+            entry.id,
+            entry.title,
+            `watch/${entry.id}`,
+            `${entry.title} ${entry.tags.join(' ')} ${reviewText}`,
+            entry.tags,
+          )
         }
         for (const thing of state.things) {
-          if (
-            `${thing.name} ${thing.notes ?? ''} ${thing.recipientLabel ?? ''} ${thing.tags.join(' ')}`
-              .toLowerCase()
-              .includes(q)
-          ) {
-            hits.push({
-              kind: 'Thing',
-              id: thing.id,
-              title: thing.name,
-              hrefSuffix: `things/${thing.id}`,
-            })
-          }
+          consider(
+            'Thing',
+            thing.id,
+            thing.name,
+            `things/${thing.id}`,
+            `${thing.name} ${thing.notes ?? ''} ${thing.recipientLabel ?? ''} ${thing.tags.join(' ')}`,
+            thing.tags,
+          )
         }
         return hits
       },

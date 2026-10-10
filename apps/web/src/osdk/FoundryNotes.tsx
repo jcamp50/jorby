@@ -1,6 +1,6 @@
 import {
   acquireJorbySharedNoteLock,
-  archiveJorbySharedNote,
+  setJorbySharedNoteArchived,
   createJorbySharedNote,
   heartbeatJorbySharedNoteLock,
   JorbyHousehold,
@@ -138,7 +138,7 @@ export function FoundryNoteDetail({
   const heartbeat = useOsdkAction(heartbeatJorbySharedNoteLock)
   const save = useOsdkAction(saveJorbySharedNote)
   const release = useOsdkAction(releaseJorbySharedNoteLock)
-  const archive = useOsdkAction(archiveJorbySharedNote)
+  const archive = useOsdkAction(setJorbySharedNoteArchived)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [lockFailed, setLockFailed] = useState(false)
@@ -248,6 +248,7 @@ export function FoundryNoteDetail({
       await archive.applyAction({
         sharedNote: note,
         expectedRevision: note.revision,
+        isArchived: true,
       })
       navigate(householdPath(householdId, 'notes'), { replace: true })
     } catch {

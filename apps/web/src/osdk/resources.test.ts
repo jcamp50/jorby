@@ -11,7 +11,7 @@ describe('OSDK consumer boundary', () => {
       ...$Interfaces,
     }
     expect(Object.keys(resources).sort()).toEqual(Object.keys(expected).sort())
-    expect(Object.keys(expected)).toHaveLength(72)
+    expect(Object.keys(expected)).toHaveLength(70)
   })
 
   it('does not re-export namespace or metadata objects', () => {
@@ -32,5 +32,11 @@ describe('OSDK consumer boundary', () => {
     expect(resources).not.toHaveProperty('updateJorbyListItem')
     expect(resources).not.toHaveProperty('updateJorbySharedList')
     expect(resources).not.toHaveProperty('provisionJorbyHousehold')
+    expect(resources).not.toHaveProperty('archiveJorbyListItem')
+    expect(resources).not.toHaveProperty('assignJorbyListItem')
+    expect(resources).not.toHaveProperty('clearJorbyListItemAssignment')
+    expect(resources).not.toHaveProperty('restoreJorbyListItem')
+    expect(resources).not.toHaveProperty('restoreJorbySharedNote')
+    expect(resources).not.toHaveProperty('archiveJorbySharedNote')
   })
 })

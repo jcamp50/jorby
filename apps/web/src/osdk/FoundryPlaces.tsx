@@ -35,13 +35,21 @@ import { useDebouncedValue } from '@/lib/debounce'
 import { AppErrorCode } from '@/lib/errors'
 import { householdPath, placeDetailPath } from '@/lib/routes'
 import { memberFromMembership } from '@/osdk/member'
-import { placeReviewOperation } from '@/osdk/operations'
+import { placeProvider, placeReviewOperation } from '@/osdk/operations'
 import { mergePlaceDetails, placeDetailsFromSource, placeHitsFromQuery } from '@/osdk/provider-hits'
 import { PlaceDetailView } from '@/places/PlaceDetailView'
 import { useMyMembership } from '@/osdk/useMyMembership'
 import { toast } from 'sonner'
 
 type PlaceFilter = 'want' | 'been' | 'favorite'
+
+/** The live save-visit Action takes a calendar date, not a timestamp. */
+function calendarDate(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 const filters: { id: PlaceFilter; label: string }[] = [
   { id: 'want', label: 'Want to go' },
@@ -71,7 +79,7 @@ export function FoundryPlacesIndex({ householdId }: { householdId: string }) {
   const [search, setSearch] = useState('')
   const term = useDebouncedValue(search.trim(), 300)
   const placesQuery = useOsdkFunction(searchJorbyPlaces, {
-    params: { provider: 'MOCK', query: term, page: 1, pageSize: 8 },
+    params: { provider: placeProvider, query: term, page: 1, pageSize: 8 },
     enabled: term.length >= 2,
   })
   const places = data ?? []
@@ -98,7 +106,7 @@ export function FoundryPlacesIndex({ householdId }: { householdId: string }) {
       if (input.providerId) {
         await saveProvider.applyAction({
           household,
-          provider: 'MOCK',
+          provider: placeProvider,
           providerPlaceId: input.providerId,
           isFavorite: input.isFavorite,
         })
@@ -225,9 +233,14 @@ export function FoundryPlaceDetail({
   const saveReview = useOsdkAction(manageJorbyPlaceReviews)
   const catalogId = typeof place?.catalogPlaceId === 'string' ? place.catalogPlaceId : undefined
   const catalog = useOsdkObject(JorbyCatalogPlace, catalogId ?? '', Boolean(catalogId))
+  const catalogProvider = catalog.object?.primaryProvider
+  const catalogProviderId = catalog.object?.primaryProviderId
   const details = useOsdkFunction(getJorbyPlaceDetails, {
-    params: { provider: 'MOCK', placeId: catalogId ?? '' },
-    enabled: Boolean(catalogId),
+    params: {
+      provider: catalogProvider ?? placeProvider,
+      placeId: catalogProviderId ?? '',
+    },
+    enabled: Boolean(catalogProvider && catalogProviderId),
   })
   const [rating, setRating] = useState('8')
   const reviews = reviewsQuery.data ?? []
@@ -273,7 +286,7 @@ export function FoundryPlaceDetail({
       await saveVisit.applyAction({
         placeEntry: place,
         expectedPlaceRevision: place.revision,
-        visitedOn: new Date().toISOString(),
+        visitedOn: calendarDate(),
       })
     } catch {
       toast.error('The visit could not be saved.')
